@@ -63,18 +63,26 @@ em { font-style: italic; }
 
 :focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
 
-/* Film grain ------------------------------------------------------------- */
-body::after {
+/* Film grain -------------------------------------------------------------
+   Sits behind everything (z-index -1), so it textures the paper/background
+   and UI but never the photographs, which paint on top of it.            */
+:root {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+body::before,
+.lb::before,
+.loader::before {
   content: "";
   position: fixed;
   inset: -100%;
-  z-index: 400;
+  z-index: -1;
   pointer-events: none;
-  opacity: 0.075;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.12;
+  background-image: var(--grain);
   animation: grain 0.9s steps(6) infinite;
 }
-:root[data-theme="light"] body::after { opacity: 0.11; mix-blend-mode: multiply; filter: invert(1); }
+:root[data-theme="light"] body::before,
+:root[data-theme="light"] .lb::before { opacity: 0.16; mix-blend-mode: multiply; filter: invert(1); }
 
 @keyframes grain {
   0% { transform: translate(0, 0); }
@@ -84,7 +92,7 @@ body::after {
   80% { transform: translate(3%, 3%); }
   100% { transform: translate(0, 0); }
 }
-@media (prefers-reduced-motion: reduce) { body::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { body::before, .lb::before, .loader::before { animation: none; } }
 
 /* Loader ----------------------------------------------------------------- */
 .loader {
@@ -291,17 +299,35 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 }
 .view-toggle button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 
-/* Photo grid ------------------------------------------------------------- */
+/* Photo grid -------------------------------------------------------------
+   Justified rows: every row spans (almost) the full width, images keep their
+   real aspect ratio (no cropping). Rows are grouped in main.js; flex-grow =
+   aspect ratio makes all frames in a row the same height.                 */
 .grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  column-gap: var(--gutter);
-  row-gap: clamp(64px, 11vw, 180px);
-  align-items: start;
+  --edge: 10px;
+  --gap: 10px;
+  --radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  margin: 0 calc(var(--edge) - var(--gutter));
 }
-.ph { margin: 0; position: relative; transition: opacity 0.6s var(--ease); }
+.row { display: flex; gap: var(--gap); width: 100%; margin-inline: auto; }
+.ph {
+  flex: var(--r) 1 0%;
+  min-width: 0;
+  margin: 0;
+  position: relative;
+  transition: opacity 0.6s var(--ease);
+}
 .ph__btn { display: block; width: 100%; text-align: left; cursor: pointer; }
-.ph__frame { position: relative; overflow: hidden; background: var(--tile); }
+.ph__frame {
+  position: relative;
+  aspect-ratio: var(--r);
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--tile);
+}
 .ph__frame img {
   width: 100%; height: 100%; object-fit: cover;
   transform: scale(1.14);
@@ -312,43 +338,67 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 .ph.is-in .ph__frame img { transform: scale(1); }
 .ph.is-in .ph__btn:hover .ph__frame img { transform: scale(1.035); }
 
-.js .ph .ph__frame { clip-path: inset(100% 0 0 0); transition: clip-path 1.4s var(--ease); }
-.js .ph.is-in .ph__frame { clip-path: inset(0 0 0 0); }
+.js .ph .ph__frame { clip-path: inset(100% 0 0 0 round var(--radius)); transition: clip-path 1.4s var(--ease); }
+.js .ph.is-in .ph__frame { clip-path: inset(0 0 0 0 round var(--radius)); }
 
+/* WebGL takes over drawing the photos (see warp.js); the DOM image stays for
+   layout, loading, clicks and accessibility. */
+.gl-on .ph__frame { background: transparent; }
+.gl-on .ph__frame img { visibility: hidden; }
+canvas.gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+/* captions: liquid-glass pills on the image */
 .ph__cap {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 14px;
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  position: absolute;
+  left: 10px; right: 10px; bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s var(--ease), transform 0.6s var(--ease);
 }
-.ph__no { font-variant-numeric: tabular-nums; }
-.ph__title { color: var(--fg); text-transform: none; letter-spacing: 0; font-family: var(--serif); font-size: 1.35rem; line-height: 1; translate: 0 -0.12em; }
-.ph__exif { text-align: right; }
+.ph:hover .ph__cap { opacity: 1; transform: none; }
+.glass {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 12px 6px;
+  border-radius: 99px;
+  color: #fff;
+  background: rgba(18, 16, 14, 0.22);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  backdrop-filter: blur(14px) saturate(1.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 6px 20px rgba(0, 0, 0, 0.18);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ph__no { font-variant-numeric: tabular-nums; opacity: 0.7; }
+.ph__title { font-family: var(--serif); font-size: 1.15rem; line-height: 1; letter-spacing: 0; text-transform: none; }
+.ph__exif:empty { display: none; }
+.ph { container-type: inline-size; }
+@container (max-width: 260px) { .ph__exif { display: none; } }
+@container (max-width: 170px) { .ph__title { display: none; } }
 
 @media (hover: hover) {
-  .grid:has(.ph__btn:hover) .ph:not(:has(.ph__btn:hover)) { opacity: 0.28; }
+  .grid:has(.ph__btn:hover) .ph:not(:has(.ph__btn:hover)) { opacity: 0.4; }
 }
-
-/* editorial placement pattern (desktop) */
-.ph.p0 { grid-column: 1 / 8; }
-.ph.p1 { grid-column: 9 / 13; margin-top: 30%; }
-.ph.p2 { grid-column: 3 / 7; }
-.ph.p3 { grid-column: 8 / 13; margin-top: 18%; }
-.ph.p4 { grid-column: 2 / 12; }
-.ph.p5 { grid-column: 1 / 5; margin-top: 12%; }
-.ph.p6 { grid-column: 6 / 11; }
-.ph.p7 { grid-column: 5 / 10; }
-
-@media (max-width: 760px) {
-  .grid { row-gap: 56px; }
-  .ph[class*="p"] { grid-column: 1 / 13; margin-top: 0; }
-  .ph.p1, .ph.p5 { grid-column: 4 / 13; }
-  .ph.p2, .ph.p6 { grid-column: 1 / 10; }
+@media (hover: none) {
+  .ph__cap { opacity: 1; transform: none; }
   .ph__exif { display: none; }
+}
+@media (max-width: 760px) {
+  .grid { --gap: 6px; --edge: 6px; --radius: 8px; }
+  .glass { padding: 5px 9px 4px; }
+  .ph__title { font-size: 0.95rem; }
 }
 
 /* Index view ------------------------------------------------------------- */
@@ -377,8 +427,18 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   transition: color 0.3s var(--ease), padding 0.5s var(--ease);
 }
 .index__row .t { font-family: var(--serif); font-size: clamp(1.6rem, 3vw, 2.6rem); line-height: 1; letter-spacing: -0.01em; text-transform: none; color: var(--fg); }
-.index__row:hover { color: var(--fg); padding-left: 12px; }
-.index__row:hover .t { font-style: italic; }
+.index__row { position: relative; isolation: isolate; }
+.index__row::before {
+  content: "";
+  position: absolute; inset: 0; z-index: -1;
+  background: var(--fg);
+  clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+  transition: clip-path 0.7s var(--ease);
+}
+.index__row .t { transition: color 0.3s var(--ease); }
+.index__row:hover { color: var(--bg); padding-left: 14px; padding-right: 14px; }
+.index__row:hover::before { clip-path: circle(140% at var(--x, 50%) var(--y, 50%)); }
+.index__row:hover .t { font-style: italic; color: var(--bg); }
 @media (max-width: 760px) {
   .index__head, .index__row { grid-template-columns: 2.5em 1fr auto; }
   .index__head > :nth-child(3), .index__head > :nth-child(4),
@@ -629,28 +689,55 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 .lb__meta { text-align: right; }
 .lb-open { overflow: hidden; }
 
-/* Cursor ----------------------------------------------------------------- */
-.cursor {
-  position: fixed; top: 0; left: 0; z-index: 450;
-  width: 10px; height: 10px;
-  margin: -5px 0 0 -5px;
+/* Cursor -----------------------------------------------------------------
+   Small inverting dot; over images it turns into a liquid-glass lens that
+   refracts and inverts what is underneath and stretches with speed.      */
+/* .cursor has no box of its own (display: contents): blob and label must be
+   top-level layers, otherwise blending and backdrop-filter only see an
+   empty, isolated group instead of the page. */
+.cursor { display: none; }
+.has-cursor .cursor { display: contents; }
+.has-cursor, .has-cursor * { cursor: none !important; }
+.cursor__blob {
+  position: fixed;
+  left: 0; top: 0; z-index: 450;
+  width: 100px; height: 100px;
+  margin: -50px 0 0 -50px;
   border-radius: 50%;
+  pointer-events: none;
   background: #fff;
   mix-blend-mode: difference;
+  transform: scale(0.1);
+  will-change: transform;
+  transition: background-color 0.35s var(--ease), box-shadow 0.35s var(--ease), opacity 0.3s;
+}
+.cursor.is-hidden > * { opacity: 0; }
+.cursor.is-label .cursor__blob {
+  background: rgba(255, 255, 255, 0.02);
+  mix-blend-mode: normal;
+  -webkit-backdrop-filter: invert(1) saturate(1.3) contrast(1.05);
+  backdrop-filter: invert(1) saturate(1.3) contrast(1.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.45),
+    inset -4px -6px 12px rgba(0, 0, 0, 0.28),
+    0 14px 34px rgba(0, 0, 0, 0.3);
+}
+/* Chromium can refract through an SVG filter (#lg, built in main.js) */
+.has-lg .cursor.is-label .cursor__blob { backdrop-filter: url(#lg) saturate(1.25); }
+.cursor__label {
+  position: fixed;
+  left: 0; top: 0; z-index: 451;
   pointer-events: none;
-  display: none;
-  align-items: center; justify-content: center;
-  transition: width 0.45s var(--ease), height 0.45s var(--ease), margin 0.45s var(--ease), opacity 0.3s;
+  color: #fff;
+  mix-blend-mode: difference;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: opacity 0.25s;
+  white-space: nowrap;
 }
-.cursor span {
-  color: #000; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
-  opacity: 0; transition: opacity 0.25s;
-}
-.has-cursor .cursor { display: flex; }
-.has-cursor, .has-cursor * { cursor: none !important; }
-.cursor.is-label { width: 78px; height: 78px; margin: -39px 0 0 -39px; }
-.cursor.is-label span { opacity: 1; }
-.cursor.is-link { width: 36px; height: 36px; margin: -18px 0 0 -18px; }
-.cursor.is-hidden { opacity: 0; }
+.cursor.is-label .cursor__label { opacity: 1; transition-delay: 0.1s; }
 
 .noscript { padding: var(--gutter); font-family: var(--serif); font-size: 1.5rem; }
