@@ -1,34 +1,24 @@
 # louiskoller.cc
 
-Portfolio für Fotografie & Filmstills. Reines HTML/CSS/JS, kein Build-Schritt, läuft direkt auf GitHub Pages.
-
-## Konzept: Dunkelkammer / Leuchttisch
-
-- **Darkroom** (dunkel, Standard) und **Light table** (hell). Umschalten oben rechts.
-- Hero: Der Name ist riesig gesetzt, dazwischen ein Panorama-Fenster, das durch deine Fotos wechselt (Verschluss-Animation).
-- **(01) Photographs**: editoriales, asymmetrisches Raster. Alternativ als **Index**-Liste, beim Hovern folgt eine Vorschau dem Cursor.
-- **(02) Film Stills**: horizontaler Filmstreifen mit Perforation, Timecode und Untertiteln, gesteuert durch normales Scrollen. Auf dem Handy wischt man ihn seitlich.
-- Lightbox mit Pfeiltasten, Esc und Swipe, dazu Filmkorn-Overlay, eigener Cursor und ein Intro im Dunkelkammerlicht („Developing 000 → 100“).
+Fotografie-Portfolio. Reines HTML/CSS/JS ohne Build-Schritt, läuft direkt auf GitHub Pages (Branch `main`).
 
 ## Inhalte pflegen
 
-Alles Inhaltliche steht in **`assets/js/content.js`**: Name, Texte, Kontakt, Fotos, Filme.
+Alle Inhalte stehen in **`assets/js/content.js`**: Name, Texte, Kontakt, Fotos und (optional) Filme.
 
-1. Fotos nach `images/photos/` legen, Filmstills nach `images/stills/`.
-   Empfehlung: JPG, lange Kante 2000–2400 px, unter ca. 600 KB.
-2. In `content.js` beim jeweiligen Eintrag `src: "images/photos/dateiname.jpg"` eintragen.
-3. Einträge mit leerem `src` zeigen einen generierten Platzhalter.
+### Neues Foto
+1. Große Version (lange Kante ca. 2400 px, JPG, Qualität ~80) nach `images/photos/` legen.
+2. Kleine Version (ca. 1200 px) mit gleichem Namen nach `images/thumbs/` legen. Sie wird im Raster genutzt und macht die Seite schnell.
+3. In `content.js` einen Eintrag in `photos` ergänzen. Die Reihenfolge dort ist die Reihenfolge auf der Seite.
 
-Hinweise:
-- `hero: true` → das Foto erscheint im wechselnden Fenster im Hero.
-- `ratio` → reserviert das Seitenverhältnis im Raster (`"3/2"`, `"2/3"`, `"4/5"`, …). Am besten passend zum echten Bild angeben.
-- Filme: `aspect` bestimmt das Bildformat des Filmstreifens (`"2.39"`, `"1.85"`, `"1.33"`). `subtitle` bleibt leer, wenn kein Untertitel gezeigt werden soll.
+Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt), `ratio` (Breite/Höhe, reserviert den Platz) und `hero: true` für das wechselnde Panorama-Fenster oben.
+
+### Filmstills
+Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblendet. Sobald dort ein Film mit Stills steht, erscheint er automatisch (Beispiel im Kommentar in `content.js`).
 
 ## Lokal ansehen
 
 ```sh
-npx http-server -p 8080
-# oder
 python3 -m http.server 8080
 ```
 

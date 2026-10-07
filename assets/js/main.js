@@ -198,7 +198,9 @@
       no: pad(i + 1, 3),
       ratio,
       src$: () => resolveSrc(p, `photo-${i}-${p.title}`, ratio),
+      thumb$: () => (p.thumb ? Promise.resolve(p.thumb) : resolveSrc(p, `photo-${i}-${p.title}`, ratio)),
       title: p.title || "Untitled",
+      where: [p.place, p.year].filter(Boolean).join(", "),
       meta: [p.place, p.camera, p.year].filter(Boolean).join(" — "),
     };
   });
@@ -231,7 +233,9 @@
   $("[data-first]").textContent = P.name[0];
   $("[data-last]").textContent = P.name[1];
   $("[data-role]").textContent = P.role || "";
-  $("[data-coords]").textContent = P.coords || "";
+  const years = photos.map((p) => +p.year).filter(Boolean);
+  $("[data-coords]").textContent =
+    P.coords || (years.length ? `${Math.min(...years)} — ${Math.max(...years)}` : "");
   $("[data-photo-count]").textContent = `${pad(photos.length)} Frames`;
 
   $("[data-statement]").textContent = P.about?.statement || "";
@@ -267,8 +271,8 @@
   })();
   const tick = () => {
     const t = fmt.format(new Date());
-    clockEl.textContent = `${P.location} ${t}`;
-    locEl.textContent = `${P.location}, ${t.slice(0, 5)}`;
+    clockEl.textContent = `${P.location || "Local"} ${t}`;
+    locEl.textContent = `${P.location || "Local time"}, ${t.slice(0, 5)}`;
   };
   tick();
   setInterval(tick, 1000);
@@ -301,7 +305,7 @@
     const p = heroSet[i];
     if (!p) return;
     const img = heroImgs[heroFront ^ 1];
-    p.src$().then((src) => {
+    p.thumb$().then((src) => {
       const swap = () => {
         heroImgs[heroFront].classList.remove("is-front");
         heroImgs[heroFront].style.zIndex = 1;
@@ -309,16 +313,16 @@
         img.classList.remove("is-front");
         void img.offsetWidth;
         img.classList.add("is-front");
-        img.alt = `${p.title}, ${p.place}`;
+        img.alt = p.where ? `${p.title}, ${p.where}` : p.title;
         heroFront ^= 1;
-        heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>, ${esc(p.place)}, ${esc(p.year)}`;
+        heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
       };
       if (img.src === src && img.complete) swap();
       else { img.onload = swap; img.src = src; }
     });
   }
   showHero(0);
-  heroSet.forEach((p) => p.src$()); // warm cache
+  heroSet.forEach((p) => p.thumb$()); // warm cache
   let heroTimer;
   const startHero = () => {
     if (reduceMotion || heroSet.length < 2) return;
@@ -337,18 +341,18 @@
       <figure class="ph p${i % 8}">
         <button class="ph__btn" type="button" data-open="${i}" data-cursor="View" aria-label="Open ${esc(p.title)}">
           <div class="ph__frame" style="aspect-ratio:${p.ratio}">
-            <img alt="${esc(p.title)}, ${esc(p.place)}" loading="lazy">
+            <img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}" loading="lazy">
           </div>
         </button>
         <figcaption class="ph__cap">
           <span class="ph__no">${p.no}</span>
           <span class="ph__title">${esc(p.title)}</span>
-          <span class="ph__exif">${esc(p.place)}, ${esc(p.year)}</span>
+          <span class="ph__exif">${esc(p.where)}</span>
         </figcaption>
       </figure>`)
     .join("");
 
-  $$(".ph", grid).forEach((fig, i) => setImg($("img", fig), photos[i].src$()));
+  $$(".ph", grid).forEach((fig, i) => setImg($("img", fig), photos[i].thumb$()));
   grid.addEventListener("click", (e) => {
     const b = e.target.closest("[data-open]");
     if (b) openLightbox(photos, +b.dataset.open);
@@ -358,7 +362,7 @@
   indexList.innerHTML = photos
     .map((p, i) => `
       <li><button class="index__row" type="button" data-open="${i}" data-cursor="View">
-        <span>${p.no}</span><span class="t">${esc(p.title)}</span><span>${esc(p.place)}</span><span>${esc(p.camera)}</span><span>${esc(p.year)}</span>
+        <span>${p.no}</span><span class="t">${esc(p.title)}</span><span>${esc(p.place || "—")}</span><span>${esc(p.camera || "—")}</span><span>${esc(p.year || "—")}</span>
       </button></li>`)
     .join("");
   indexList.addEventListener("click", (e) => {
@@ -396,7 +400,7 @@
     indexList.addEventListener("pointerover", (e) => {
       const b = e.target.closest("[data-open]");
       if (!b) return;
-      photos[+b.dataset.open].src$().then((src) => { previewImg.src = src; });
+      photos[+b.dataset.open].thumb$().then((src) => { previewImg.src = src; });
       preview.classList.add("is-on");
     });
     indexList.addEventListener("pointerleave", () => preview.classList.remove("is-on"));
@@ -448,6 +452,13 @@
   });
 
   const stillsSec = $("[data-stills]");
+  if (!allStills.length) {
+    // no films yet: drop the section and its nav link
+    stillsSec.remove();
+    $('.nav__links a[href="#stills"]')?.remove();
+    $("#info .section-head__num").textContent = "(02)";
+    $('.nav__links a[href="#info"] sup').textContent = "02";
+  }
   const progressEl = $("[data-progress]");
   const reelEl = $("[data-reel]");
   const filmCards = $$(".film-card", track);
@@ -455,6 +466,7 @@
   let travel = 0;
 
   function measureStills() {
+    if (!stillsSec.isConnected) return;
     pinned = !reduceMotion && innerWidth > 760;
     stillsSec.classList.toggle("is-native", !pinned);
     if (!pinned) {
@@ -468,7 +480,7 @@
   }
 
   function updateStills() {
-    if (!pinned) return;
+    if (!pinned || !stillsSec.isConnected) return;
     const top = stillsSec.getBoundingClientRect().top;
     const prog = Math.min(1, Math.max(0, -top / (stillsSec.offsetHeight - innerHeight || 1)));
     track.style.transform = `translate3d(${-prog * travel}px,0,0)`;
@@ -479,7 +491,7 @@
     reelEl.textContent = `Reel ${pad(current + 1)} — ${films[current]?.title || ""}`;
   }
 
-  $(".stills__viewport").addEventListener("scroll", (e) => {
+  $(".stills__viewport", stillsSec).addEventListener("scroll", (e) => {
     if (pinned) return;
     const v = e.currentTarget;
     const prog = v.scrollLeft / Math.max(1, v.scrollWidth - v.clientWidth);
@@ -528,7 +540,7 @@
       if (lbImg.src === src) return done();
       lbImg.onload = done;
       lbImg.src = src;
-      lbImg.alt = it.subtitle ? `Still from ${it.title}` : `${it.title}, ${it.place || ""}`;
+      lbImg.alt = it.subtitle ? `Still from ${it.title}` : it.where ? `${it.title}, ${it.where}` : it.title;
     });
     // preload neighbours
     [1, -1].forEach((d) => lbList[(lbIdx + d + lbList.length) % lbList.length]?.src$());
