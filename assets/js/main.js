@@ -338,25 +338,88 @@
   const grid = $("[data-grid]");
   grid.innerHTML = photos
     .map((p, i) => `
-      <figure class="ph p${i % 8}">
+      <figure class="ph" style="--r:${p.ratio}">
         <button class="ph__btn" type="button" data-open="${i}" data-cursor="View" aria-label="Open ${esc(p.title)}">
-          <div class="ph__frame" style="aspect-ratio:${p.ratio}">
+          <div class="ph__frame">
             <img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}" loading="lazy">
           </div>
         </button>
         <figcaption class="ph__cap">
-          <span class="ph__no">${p.no}</span>
-          <span class="ph__title">${esc(p.title)}</span>
-          <span class="ph__exif">${esc(p.where)}</span>
+          <span class="glass"><span class="ph__no">${p.no}</span><span class="ph__title">${esc(p.title)}</span></span>
+          <span class="glass ph__exif">${esc(p.where)}</span>
         </figcaption>
       </figure>`)
     .join("");
 
-  $$(".ph", grid).forEach((fig, i) => setImg($("img", fig), photos[i].thumb$()));
+  const figs = $$(".ph", grid);
+  figs.forEach((fig, i) => setImg($("img", fig), photos[i].thumb$()));
   grid.addEventListener("click", (e) => {
     const b = e.target.closest("[data-open]");
     if (b) openLightbox(photos, +b.dataset.open);
   });
+
+  /* Justified rows. Each row fills the width and every photo keeps its own
+     aspect ratio. The target height cycles so the rhythm alternates between
+     near-fullscreen single frames and calmer rows of two or three. */
+  let laidOutFor = 0;
+  function layoutGrid() {
+    const W = grid.clientWidth;
+    if (!W || W === laidOutFor) return;
+    laidOutFor = W;
+    const gap = parseFloat(getComputedStyle(grid).getPropertyValue("--gap")) || 10;
+    const vh = innerHeight;
+    const mobile = W < 700;
+    const targets = mobile ? [W / 1.15, W * 0.42, W * 0.55] : [vh * 0.95, vh * 0.6, vh * 0.42, vh * 0.72];
+    const maxH = mobile ? W * 1.25 : vh * 0.95;
+    const heightOf = (row) => (W - gap * (row.length - 1)) / row.reduce((t, i) => t + photos[i].ratio, 0);
+
+    const rows = [];
+    let row = [];
+    for (let i = 0; i < photos.length; i++) {
+      const target = targets[rows.length % targets.length];
+      const before = row.length ? heightOf(row) : Infinity;
+      row.push(i);
+      const after = heightOf(row);
+      if (after <= target) {
+        // close the row with whichever version lands closer to the target
+        if (row.length > 1 && Math.abs(Math.log(before / target)) < Math.abs(Math.log(after / target)) && before <= maxH) {
+          row.pop();
+          rows.push(row);
+          row = [i];
+        } else {
+          rows.push(row);
+          row = [];
+        }
+      }
+    }
+    if (row.length) rows.push(row);
+
+    grid.textContent = "";
+    rows.forEach((r) => {
+      const el = document.createElement("div");
+      el.className = "row";
+      const h = heightOf(r);
+      if (h > maxH) {
+        // too tall (e.g. a lone portrait): shrink the row instead of cropping
+        const sum = r.reduce((t, i) => t + photos[i].ratio, 0);
+        el.style.maxWidth = `${maxH * sum + gap * (r.length - 1)}px`;
+      }
+      r.forEach((i) => el.appendChild(figs[i]));
+      grid.appendChild(el);
+    });
+  }
+  layoutGrid();
+  addEventListener("resize", () => requestAnimationFrame(layoutGrid));
+
+  // which photo is hovered (drives the dimming in WebGL)
+  let hoveredIdx = -1;
+  if (finePointer) {
+    grid.addEventListener("pointerover", (e) => {
+      const b = e.target.closest("[data-open]");
+      hoveredIdx = b ? +b.dataset.open : -1;
+    });
+    grid.addEventListener("pointerleave", () => { hoveredIdx = -1; });
+  }
 
   const indexList = $("[data-index-list]");
   indexList.innerHTML = photos
@@ -369,6 +432,13 @@
     const b = e.target.closest("[data-open]");
     if (b) openLightbox(photos, +b.dataset.open);
   });
+  indexList.addEventListener("pointerover", (e) => {
+    const b = e.target.closest(".index__row");
+    if (!b || b.contains(e.relatedTarget)) return;
+    const r = b.getBoundingClientRect();
+    b.style.setProperty("--x", `${e.clientX - r.left}px`);
+    b.style.setProperty("--y", `${e.clientY - r.top}px`);
+  });
 
   // view toggle
   const indexWrap = $("[data-index]");
@@ -377,7 +447,7 @@
     grid.hidden = v !== "grid";
     indexWrap.hidden = v !== "index";
     store.set("lk-view", v);
-    if (v === "grid") $$(".ph", grid).forEach((el) => io.observe(el));
+    if (v === "grid") { layoutGrid(); $$(".ph", grid).forEach((el) => io.observe(el)); }
     requestAnimationFrame(measureStills);
   };
   $$("[data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
@@ -517,6 +587,23 @@
   const savedView = store.get("lk-view");
   setView(savedView === "index" ? "index" : "grid");
 
+  /* Scroll warp (WebGL) */
+  if (!reduceMotion && window.LKWarp) {
+    try {
+      window.LKWarp({
+        items: figs.map((fig, i) => ({
+          i, fig,
+          frame: $(".ph__frame", fig),
+          img: $("img", fig),
+          radius: () => parseFloat(getComputedStyle(grid).getPropertyValue("--radius")) || 0,
+        })),
+        hovered: () => hoveredIdx,
+      });
+    } catch (e) {
+      document.documentElement.classList.remove("gl-on");
+    }
+  }
+
   /* ------------------------------------------------------------------------
      Lightbox
      ------------------------------------------------------------------------ */
@@ -592,24 +679,99 @@
      ------------------------------------------------------------------------ */
   if (finePointer) {
     const cur = $(".cursor");
+    const blob = $(".cursor__blob");
     const label = $("[data-cursor-label]");
     document.documentElement.classList.add("has-cursor");
+
+    // Chromium can run an SVG filter on the backdrop: real refraction.
+    const chromium = !!(navigator.userAgentData?.brands || []).some((b) => /Chromium|Google Chrome|Microsoft Edge/.test(b.brand));
+    if (chromium) {
+      buildLensFilter();
+      document.documentElement.classList.add("has-lg");
+    }
+
     let x = innerWidth / 2, y = innerHeight / 2, cx = x, cy = y;
+    let scale = 0.1, target = 0.1, press = 1, stretch = 0, angle = 0;
     addEventListener("pointermove", (e) => { x = e.clientX; y = e.clientY; cur.classList.remove("is-hidden"); }, { passive: true });
+    addEventListener("pointerdown", () => { press = 0.82; });
+    addEventListener("pointerup", () => { press = 1; });
     document.addEventListener("pointerleave", () => cur.classList.add("is-hidden"));
+
     const loop = () => {
-      cx += (x - cx) * 0.22; cy += (y - cy) * 0.22;
-      cur.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
+      const px = cx, py = cy;
+      cx += (x - cx) * 0.2; cy += (y - cy) * 0.2;
+      const vx = cx - px, vy = cy - py;
+      const speed = Math.hypot(vx, vy);
+      // liquid: stretch along the direction of travel, wobble back when it stops
+      stretch += (Math.min(speed / 45, 0.38) - stretch) * 0.18;
+      if (speed > 0.4) angle = Math.atan2(vy, vx);
+      scale += (target * press - scale) * 0.16;
+      blob.style.transform = `translate3d(${cx}px, ${cy}px, 0) rotate(${angle}rad) scale(${scale * (1 + stretch)}, ${scale * (1 - stretch * 0.55)})`;
+      label.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
       requestAnimationFrame(loop);
     };
     loop();
+
     document.addEventListener("pointerover", (e) => {
       const t = e.target.closest("[data-cursor]");
       const link = e.target.closest("a, button");
       cur.classList.toggle("is-label", !!t);
       cur.classList.toggle("is-link", !t && !!link);
-      label.textContent = t ? t.dataset.cursor : "";
+      target = t ? 1 : link ? 0.36 : 0.1;
+      if (t) label.textContent = t.dataset.cursor;
     });
+  }
+
+  /* SVG filter for the lens: a generated displacement map bends the backdrop
+     towards the centre (magnifies) and much harder at the rim (refraction);
+     each colour channel bends a little differently (dispersion), then the
+     result is inverted. */
+  function buildLensFilter() {
+    const S = 100, SCALE = 90;
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const g = c.getContext("2d");
+    const img = g.createImageData(S, S);
+    for (let j = 0; j < S; j++) {
+      for (let i = 0; i < S; i++) {
+        const nx = (i + 0.5) / S * 2 - 1, ny = (j + 0.5) / S * 2 - 1;
+        const r = Math.hypot(nx, ny);
+        let dx = 0, dy = 0;
+        if (r < 1) {
+          const t = Math.max(0, (r - 0.62) / 0.38);
+          const k = 0.8 - 0.55 * t * t * (3 - 2 * t); // sample closer to centre near the rim
+          dx = (k - 1) * nx * (S / 2);
+          dy = (k - 1) * ny * (S / 2);
+        }
+        const o = (j * S + i) * 4;
+        img.data[o] = Math.max(0, Math.min(255, Math.round((0.5 + dx / SCALE) * 255)));
+        img.data[o + 1] = Math.max(0, Math.min(255, Math.round((0.5 + dy / SCALE) * 255)));
+        img.data[o + 2] = 128;
+        img.data[o + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    const map = c.toDataURL();
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", "0");
+    svg.setAttribute("height", "0");
+    svg.setAttribute("aria-hidden", "true");
+    svg.style.position = "absolute";
+    const channel = (name, matrix, scale) => `
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale}" xChannelSelector="R" yChannelSelector="G" result="d${name}"/>
+      <feColorMatrix in="d${name}" type="matrix" values="${matrix}" result="${name}"/>`;
+    svg.innerHTML = `
+      <filter id="lg" x="0" y="0" width="${S}" height="${S}" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+        <feImage href="${map}" x="0" y="0" width="${S}" height="${S}" preserveAspectRatio="none" result="map"/>
+        ${channel("r", "1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0", SCALE - 6)}
+        ${channel("g", "0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0", SCALE)}
+        ${channel("b", "0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0", SCALE + 6)}
+        <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg"/>
+        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb"/>
+        <feColorMatrix in="rgb" type="matrix" values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0"/>
+      </filter>`;
+    document.body.appendChild(svg);
   }
 
   /* ------------------------------------------------------------------------
