@@ -26,9 +26,9 @@ window.LKWarp = function LKWarp({ items, hovered }) {
       vec2 p = uRect.xy + aPos * uRect.zw;
       vec2 n = p / uView * 2.0 - 1.0;                       // -1..1, y down
       // the page swings sideways, more the further from the vertical centre
-      p.x -= uVel * n.y * n.y * uView.x * 0.055;
+      p.x -= uVel * n.y * n.y * uView.x * 0.072;
       // rows bow against the scroll direction, strongest in the middle
-      p.y -= uVel * (1.0 - n.x * n.x) * uView.y * 0.045;
+      p.y -= uVel * (1.0 - n.x * n.x) * uView.y * 0.058;
       vec2 c = p / uView * 2.0 - 1.0;
       gl_Position = vec4(c.x, -c.y, 0.0, 1.0);
     }`;
