@@ -130,7 +130,19 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     zoom: 1.14,
     alpha: 1,
     loaded: 0,
+    ready: false, // image fetched + decoded, can be uploaded to the GPU
   }));
+
+  // Fetch and decode every image up front, so nothing has to load (or decode
+  // on the main thread) while the user is scrolling.
+  planes.forEach((p) => {
+    const done = () => {
+      const ok = () => { p.ready = true; };
+      if (p.img.decode) p.img.decode().then(ok, ok); else ok();
+    };
+    if (p.img.complete && p.img.naturalWidth) done();
+    else p.img.addEventListener("load", done, { once: true });
+  });
 
   function upload(p) {
     const t = gl.createTexture();
@@ -191,18 +203,31 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     gl.uniform1f(U.uVel, vel);
     gl.uniform3f(U.uTile, tile[0], tile[1], tile[2]);
 
+    // Upload textures ahead of time (closest to the viewport first, within a
+    // small time budget per frame) so photos are complete before they arrive.
+    const pending = planes.filter((p) => p.ready && !p.tex);
+    if (pending.length) {
+      const t0 = performance.now();
+      const away = (p) => Math.abs(p.frame.getBoundingClientRect().top - H / 2);
+      pending.map((p) => [away(p), p]).sort((a, b) => a[0] - b[0]).some(([, p]) => {
+        upload(p);
+        return performance.now() - t0 > 5;
+      });
+    }
+
     const hov = hovered();
     const margin = H * 0.25;
     for (const p of planes) {
       const r = p.frame.getBoundingClientRect();
       if (!r.width || r.bottom < -margin || r.top > H + margin) continue;
 
-      if (!p.tex && p.img.complete && p.img.naturalWidth) upload(p);
-      const inView = p.fig.classList.contains("is-in");
-      p.reveal = ease(p.reveal, inView ? 1 : 0, 0.06, dt);
+      // only reveal once the texture is on the GPU, and start a little before
+      // the photo scrolls into view so it is whole when it arrives
+      const inView = !!p.tex && (p.fig.classList.contains("is-in") || r.top < H * 1.3);
+      p.reveal = ease(p.reveal, inView ? 1 : 0, 0.1, dt);
       p.zoom = ease(p.zoom, inView ? (hov === p.i ? 1.04 : 1) : 1.14, 0.05, dt);
       p.alpha = ease(p.alpha, hov >= 0 && hov !== p.i ? 0.4 : 1, 0.1, dt);
-      p.loaded = ease(p.loaded, p.tex ? 1 : 0, 0.08, dt);
+      p.loaded = p.tex ? 1 : 0;
       if (p.reveal < 0.002) continue;
 
       gl.uniform4f(U.uRect, r.left, r.top, r.width, r.height);

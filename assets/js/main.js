@@ -341,7 +341,7 @@
       <figure class="ph" style="--r:${p.ratio}">
         <button class="ph__btn" type="button" data-open="${i}" data-cursor="View" aria-label="Open ${esc(p.title)}">
           <div class="ph__frame">
-            <img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}" loading="lazy">
+            <img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}">
           </div>
         </button>
         <figcaption class="ph__cap">
@@ -587,6 +587,45 @@
   const savedView = store.get("lk-view");
   setView(savedView === "index" ? "index" : "grid");
 
+  /* ------------------------------------------------------------------------
+     Smooth scrolling. macOS already scrolls with inertia; on Windows/Linux a
+     mouse wheel jumps in steps, so we glide towards the target ourselves.
+     This loop is registered before the WebGL warp loop on purpose: it moves the
+     page first, the warp then reads the new position in the same frame.
+     ------------------------------------------------------------------------ */
+  const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
+  if (finePointer && !reduceMotion && !isApple) {
+    const root = document.documentElement;
+    let cur = scrollY, tgt = scrollY, applied = scrollY, last = performance.now();
+    const maxY = () => Math.max(0, root.scrollHeight - innerHeight);
+
+    addEventListener("wheel", (e) => {
+      if (e.ctrlKey || e.defaultPrevented || root.classList.contains("lb-open")) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? innerHeight : 1;
+      e.preventDefault();
+      tgt = Math.min(maxY(), Math.max(0, tgt + e.deltaY * unit));
+    }, { passive: false });
+
+    // scrolled by something else (keyboard, scrollbar, anchor link): follow it
+    addEventListener("scroll", () => {
+      if (Math.abs(scrollY - applied) > 2) cur = tgt = applied = scrollY;
+    }, { passive: true });
+
+    const glide = (now) => {
+      const dt = Math.min(64, now - last);
+      last = now;
+      if (cur !== tgt) {
+        cur += (tgt - cur) * (1 - Math.pow(1 - 0.085, dt / 16.67));
+        if (Math.abs(tgt - cur) < 0.3) cur = tgt;
+        scrollTo({ top: cur, behavior: "instant" });
+        applied = scrollY;
+      }
+      requestAnimationFrame(glide);
+    };
+    requestAnimationFrame(glide);
+  }
+
   /* Scroll warp (WebGL) */
   if (!reduceMotion && window.LKWarp) {
     try {
@@ -690,36 +729,58 @@
       document.documentElement.classList.add("has-lg");
     }
 
+    // The blob element is 100px; every size below is scaled by SIZE (20% smaller).
+    const SIZE = 0.8;
+    const SIZES = { dot: 0.1 * SIZE, link: 0.36 * SIZE, label: 1 * SIZE };
     let x = innerWidth / 2, y = innerHeight / 2, cx = x, cy = y;
-    let scale = 0.1, target = 0.1, press = 1, stretch = 0, angle = 0;
+    let scale = SIZES.dot, target = SIZES.dot, press = 1, stretch = 0, angle = 0;
+    let lastSY = scrollY, scrollV = 0, lastProbe = 0, last = performance.now();
     addEventListener("pointermove", (e) => { x = e.clientX; y = e.clientY; cur.classList.remove("is-hidden"); }, { passive: true });
     addEventListener("pointerdown", () => { press = 0.82; });
     addEventListener("pointerup", () => { press = 1; });
     document.addEventListener("pointerleave", () => cur.classList.add("is-hidden"));
 
-    const loop = () => {
+    const setHover = (el) => {
+      const t = el?.closest?.("[data-cursor]");
+      const link = el?.closest?.("a, button");
+      cur.classList.toggle("is-label", !!t);
+      cur.classList.toggle("is-link", !t && !!link);
+      target = t ? SIZES.label : link ? SIZES.link : SIZES.dot;
+      if (t) label.textContent = t.dataset.cursor;
+    };
+
+    // time based easing, so it feels the same on 60, 120 and 144 Hz screens
+    const k = (rate, dt) => 1 - Math.pow(1 - rate, dt / 16.67);
+
+    const loop = (now) => {
+      const dt = Math.min(64, now - last);
+      last = now;
       const px = cx, py = cy;
-      cx += (x - cx) * 0.2; cy += (y - cy) * 0.2;
-      const vx = cx - px, vy = cy - py;
+      cx += (x - cx) * k(0.15, dt); cy += (y - cy) * k(0.15, dt);
+
+      // scrolling moves the page under the pointer: treat it as movement too,
+      // and keep the hover state up to date while content slides past
+      const sy = scrollY;
+      scrollV += ((sy - lastSY) * (16.67 / dt) - scrollV) * k(0.2, dt);
+      lastSY = sy;
+      if (Math.abs(scrollV) > 0.5 && now - lastProbe > 70) {
+        lastProbe = now;
+        setHover(document.elementFromPoint(x, y));
+      }
+
+      const vx = (cx - px) * (16.67 / dt), vy = (cy - py) * (16.67 / dt) + scrollV * 0.6;
       const speed = Math.hypot(vx, vy);
       // liquid: stretch along the direction of travel, wobble back when it stops
-      stretch += (Math.min(speed / 45, 0.38) - stretch) * 0.18;
+      stretch += (Math.min(speed / 45, 0.38) - stretch) * k(0.14, dt);
       if (speed > 0.4) angle = Math.atan2(vy, vx);
-      scale += (target * press - scale) * 0.16;
+      scale += (target * press - scale) * k(0.14, dt);
       blob.style.transform = `translate3d(${cx}px, ${cy}px, 0) rotate(${angle}rad) scale(${scale * (1 + stretch)}, ${scale * (1 - stretch * 0.55)})`;
       label.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
       requestAnimationFrame(loop);
     };
-    loop();
+    requestAnimationFrame(loop);
 
-    document.addEventListener("pointerover", (e) => {
-      const t = e.target.closest("[data-cursor]");
-      const link = e.target.closest("a, button");
-      cur.classList.toggle("is-label", !!t);
-      cur.classList.toggle("is-link", !t && !!link);
-      target = t ? 1 : link ? 0.36 : 0.1;
-      if (t) label.textContent = t.dataset.cursor;
-    });
+    document.addEventListener("pointerover", (e) => setHover(e.target));
   }
 
   /* SVG filter for the lens: a generated displacement map bends the backdrop
