@@ -8,7 +8,7 @@
       wird `src` auch im Raster verwendet.
 
    ratio  -> Breite/Höhe in Pixeln, z.B. "6000/4000" – reserviert den Platz
-   hero   -> true = erscheint im wechselnden Panorama-Fenster oben
+   hero   -> true = erscheint im großen, wechselnden Titelbild oben
    Leere Felder (place, year, camera) werden einfach nicht angezeigt.
    Die Reihenfolge hier = Reihenfolge auf der Seite.
    ========================================================================== */
