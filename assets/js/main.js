@@ -293,44 +293,221 @@
   });
 
   /* ------------------------------------------------------------------------
-     Hero — cycling frame between first and last name
+     Hero — a window between first and last name you can grab and throw.
+     One float `pos` (in slides) drives everything; a spring moves it, the
+     pointer moves it 1:1, and either can take over from the other at any
+     instant because both read and write the same live value.
      ------------------------------------------------------------------------ */
   const heroSet = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
-  const heroImgs = [$("[data-hero-a]"), $("[data-hero-b]")];
+  const heroN = heroSet.length;
+  const heroFrame = $("[data-hero-frame]");
+  const heroStrip = $("[data-hero-strip]");
   const heroCap = $("[data-hero-caption]");
-  let heroIdx = 0;
-  let heroFront = 0;
+  const heroTicksEl = $("[data-hero-ticks]");
+  const HERO_DWELL = 4200;        // ms a frame rests before the next one
+  const PARALLAX = 0.1;           // image drift against its window, in frame widths
 
-  function showHero(i) {
-    const p = heroSet[i];
-    if (!p) return;
-    const img = heroImgs[heroFront ^ 1];
-    p.thumb$().then((src) => {
-      const swap = () => {
-        heroImgs[heroFront].classList.remove("is-front");
-        heroImgs[heroFront].style.zIndex = 1;
-        img.style.zIndex = "";
-        img.classList.remove("is-front");
-        void img.offsetWidth;
-        img.classList.add("is-front");
-        img.alt = p.where ? `${p.title}, ${p.where}` : p.title;
-        heroFront ^= 1;
-        heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
-      };
-      if (img.src === src && img.complete) swap();
-      else { img.onload = swap; img.src = src; }
-    });
+  heroStrip.innerHTML = heroSet
+    .map((p) => `<span class="hero__slide"><img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}" draggable="false"></span>`)
+    .join("");
+  const heroSlides = $$(".hero__slide", heroStrip);
+  const heroSlideImgs = heroSlides.map((s) => $("img", s));
+  heroSet.forEach((p, i) => p.thumb$().then((src) => {
+    heroSlideImgs[i].decoding = "async";
+    heroSlideImgs[i].src = src;
+  }));
+
+  heroTicksEl.innerHTML = heroN > 1
+    ? heroSet.map((p, i) => `<button type="button" class="hero__tick" data-tick="${i}" aria-label="Show ${esc(p.title)}"></button>`).join("")
+    : "";
+  const heroTicks = $$(".hero__tick", heroTicksEl);
+
+  const wrap = (v, n) => ((v % n) + n) % n;
+  let pos = 0;          // live (presentation) value
+  let vel = 0;          // slides per second
+  let target = 0;       // spring rest point (unwrapped, may grow past n)
+  let spring = null;    // { damping, response } while animating
+  let heroW = heroFrame.clientWidth || 1;
+  let shown = -1;
+  let raf = 0;
+
+  function renderHero() {
+    for (let i = 0; i < heroN; i++) {
+      // nearest signed distance on the loop, so the strip never runs out
+      let d = wrap(i - pos + heroN / 2, heroN) - heroN / 2;
+      const far = Math.abs(d) > 1.5;
+      heroSlides[i].style.visibility = far ? "hidden" : "";
+      if (far) continue;
+      heroSlides[i].style.transform = `translate3d(${(d * 100).toFixed(3)}%,0,0)`;
+      heroSlideImgs[i].style.transform = `translate3d(${(-d * PARALLAX * heroW).toFixed(2)}px,0,0)`;
+    }
+    const idx = wrap(Math.round(pos), heroN);
+    if (idx !== shown) {
+      shown = idx;
+      const p = heroSet[idx];
+      heroCap.innerHTML = `Fr. ${pad(idx + 1)}/${pad(heroN)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
+      heroTicks.forEach((t, i) => {
+        t.classList.toggle("is-on", i < idx);
+        t.setAttribute("aria-current", i === idx ? "true" : "false");
+      });
+    }
   }
-  showHero(0);
-  heroSet.forEach((p) => p.thumb$()); // warm cache
-  let heroTimer;
-  const startHero = () => {
-    if (reduceMotion || heroSet.length < 2) return;
-    clearInterval(heroTimer);
-    heroTimer = setInterval(() => { heroIdx = (heroIdx + 1) % heroSet.length; showHero(heroIdx); }, 2600);
-  };
-  startHero();
-  $("[data-hero-frame]").addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
+
+  // Damping ratio + response (s), integrated with small fixed steps.
+  function springTo(t, { damping = 1, response = 0.45, velocity } = {}) {
+    target = t;
+    if (velocity !== undefined) vel = velocity;
+    if (reduceMotion) { pos = target; vel = 0; spring = null; renderHero(); return; }
+    spring = { damping, response };
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(heroTick); }
+  }
+  let last = 0;
+  function heroTick(now) {
+    raf = 0;
+    if (!spring) return;
+    let dt = Math.min(0.064, (now - last) / 1000);
+    last = now;
+    const k = Math.pow((2 * Math.PI) / spring.response, 2);
+    const c = (4 * Math.PI * spring.damping) / spring.response;
+    while (dt > 0) {
+      const h = Math.min(dt, 1 / 240);
+      vel += (-k * (pos - target) - c * vel) * h;
+      pos += vel * h;
+      dt -= h;
+    }
+    if (Math.abs(pos - target) < 1e-4 && Math.abs(vel) < 1e-3) {
+      pos = target; vel = 0; spring = null;
+      // keep numbers small without a visible jump
+      const w = Math.floor(pos / heroN) * heroN;
+      pos -= w; target -= w;
+    }
+    renderHero();
+    if (spring) raf = requestAnimationFrame(heroTick);
+  }
+
+  /* Autoplay — the active tick fills while a frame rests. It pauses while
+     the pointer is on the frame, while dragging, off-screen or in a hidden tab. */
+  let dwellStart = performance.now();
+  let dwellAt = 0;      // ms accumulated in the current rest
+  let paused = { hover: false, drag: false, away: false, focus: false };
+  const isPaused = () => reduceMotion || heroN < 2 || Object.values(paused).some(Boolean);
+  function resetDwell() { dwellAt = 0; dwellStart = performance.now(); }
+  function dwellLoop(now) {
+    if (!isPaused() && !spring) dwellAt += now - dwellStart;
+    dwellStart = now;
+    const p = Math.min(1, dwellAt / HERO_DWELL);
+    const cur = heroTicks[wrap(Math.round(pos), heroN)];
+    if (cur) cur.style.setProperty("--p", p.toFixed(3));
+    heroTicks.forEach((t) => { if (t !== cur) t.style.removeProperty("--p"); });
+    if (p >= 1) { resetDwell(); springTo(Math.round(target) + 1, { damping: 1, response: 0.9 }); }
+    requestAnimationFrame(dwellLoop);
+  }
+  if (heroN > 1 && !reduceMotion) requestAnimationFrame(dwellLoop);
+
+  const setPause = (key, v) => { paused[key] = v; };
+  if (finePointer) {
+    heroFrame.addEventListener("pointerenter", () => setPause("hover", true));
+    heroFrame.addEventListener("pointerleave", () => setPause("hover", false));
+  }
+  heroFrame.addEventListener("focus", () => setPause("focus", true));
+  heroFrame.addEventListener("blur", () => setPause("focus", false));
+  new IntersectionObserver(([e]) => setPause("away", !e.isIntersecting)).observe(heroFrame);
+  document.addEventListener("visibilitychange", () => setPause("away", document.hidden));
+
+  function go(to, opts) {
+    // shortest way round the loop to the requested slide
+    const base = Math.round(target);
+    let d = wrap(to - base + heroN / 2, heroN) - heroN / 2;
+    resetDwell();
+    springTo(base + d, opts);
+  }
+  heroTicks.forEach((t, i) => t.addEventListener("click", () => go(i)));
+
+  heroFrame.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      resetDwell();
+      springTo(Math.round(target) + (e.key === "ArrowRight" ? 1 : -1));
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openLightbox(photos, photos.indexOf(heroSet[wrap(Math.round(pos), heroN)]));
+    }
+  });
+
+  /* Direct manipulation */
+  const SLOP = 8;                 // px before we decide what the gesture is
+  let drag = null;
+  // Apple's projection: where momentum would carry the strip if let go
+  const project = (v, rate = 0.998) => (v / 1000) * rate / (1 - rate);
+
+  heroFrame.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || heroN < 1) return;
+    heroW = heroFrame.clientWidth || 1;
+    // grab whatever is on screen right now — never the target
+    spring = null;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, pos0: pos, mode: null, hist: [[e.timeStamp, e.clientX]] };
+    heroFrame.classList.add("is-pressed");
+    setPause("drag", true);
+  });
+  heroFrame.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0;
+    const dy = e.clientY - drag.y0;
+    if (!drag.mode) {
+      if (Math.hypot(dx, dy) < SLOP) return;
+      drag.mode = Math.abs(dx) > Math.abs(dy) && heroN > 1 ? "x" : "none";
+      if (drag.mode === "x") {
+        heroFrame.setPointerCapture(e.pointerId);
+        heroFrame.classList.add("is-dragging");
+        drag.x0 = e.clientX;    // start tracking from here so nothing jumps
+        drag.pos0 = pos;
+      } else {
+        heroFrame.classList.remove("is-pressed");
+      }
+    }
+    if (drag.mode !== "x") return;
+    pos = drag.pos0 - (e.clientX - drag.x0) / heroW;
+    drag.hist.push([e.timeStamp, e.clientX]);
+    if (drag.hist.length > 6) drag.hist.shift();
+    renderHero();
+  });
+  function endDrag(e, cancelled) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag;
+    drag = null;
+    heroFrame.classList.remove("is-pressed", "is-dragging");
+    setPause("drag", false);
+    resetDwell();
+    if (d.mode === "x") {
+      // release velocity from the last ~100ms of movement
+      const now = e.timeStamp;
+      const recent = d.hist.filter(([t]) => now - t < 100);
+      // held still before letting go → no momentum to hand off
+      const vx = recent.length ? ((e.clientX - recent[0][1]) / Math.max(1, now - recent[0][0])) * 1000 : 0; // px/s
+      const vSlides = -vx / heroW;                      // slides/s
+      const projected = pos + project(-vx) / heroW;
+      // land on the frame nearest the projection, at most two away
+      let to = Math.round(projected);
+      to = Math.max(Math.round(pos) - 2, Math.min(Math.round(pos) + 2, to));
+      // a deliberate flick always moves at least one frame
+      if (to === Math.round(d.pos0) && Math.abs(vx) > 300) to += vx < 0 ? 1 : -1;
+      // momentum earned a little bounce; a slow drop settles without one
+      springTo(to, { damping: Math.abs(vx) > 300 ? 0.82 : 1, response: 0.4, velocity: vSlides });
+    } else if (!cancelled && d.mode === null) {
+      springTo(Math.round(pos));
+      openLightbox(photos, photos.indexOf(heroSet[wrap(Math.round(pos), heroN)]));
+    } else {
+      springTo(Math.round(pos));
+    }
+  }
+  heroFrame.addEventListener("pointerup", (e) => endDrag(e, false));
+  heroFrame.addEventListener("pointercancel", (e) => endDrag(e, true));
+  heroFrame.addEventListener("lostpointercapture", (e) => endDrag(e, true));
+  heroFrame.addEventListener("dragstart", (e) => e.preventDefault());
+
+  addEventListener("resize", () => { heroW = heroFrame.clientWidth || 1; renderHero(); }, { passive: true });
+  renderHero();
 
   /* ------------------------------------------------------------------------
      Photographs — grid + index

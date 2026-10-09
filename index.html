@@ -61,9 +61,8 @@
       <h1 class="hero__name">
         <span class="hero__line hero__line--1">
           <span class="hero__word" data-first></span>
-          <span class="hero__frame" data-hero-frame data-cursor="View">
-            <img alt="" data-hero-a>
-            <img alt="" data-hero-b>
+          <span class="hero__frame" data-hero-frame data-cursor="Drag" tabindex="0" role="group" aria-roledescription="carousel" aria-label="Selected photographs. Drag or use the arrow keys to browse, Enter to open.">
+            <span class="hero__strip" data-hero-strip></span>
           </span>
         </span>
         <span class="hero__line hero__line--2">
@@ -73,7 +72,8 @@
 
       <div class="hero__foot">
         <a href="#photographs" class="hero__scroll">Scroll <span aria-hidden="true">↓</span></a>
-        <span class="hero__caption" data-hero-caption></span>
+        <div class="hero__ticks" data-hero-ticks role="group" aria-label="Choose photograph"></div>
+        <span class="hero__caption" data-hero-caption aria-live="polite"></span>
       </div>
     </section>
 

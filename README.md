@@ -11,7 +11,7 @@ Alle Inhalte stehen in **`assets/js/content.js`**: Name, Texte, Kontakt, Fotos u
 2. Kleine Version (ca. 1200 px) mit gleichem Namen nach `images/thumbs/` legen. Sie wird im Raster genutzt und macht die Seite schnell.
 3. In `content.js` einen Eintrag in `photos` ergänzen. Die Reihenfolge dort ist die Reihenfolge auf der Seite.
 
-Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt), `ratio` (Breite/Höhe, reserviert den Platz) und `hero: true` für das wechselnde Panorama-Fenster oben.
+Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt), `ratio` (Breite/Höhe, reserviert den Platz) und `hero: true` für das Panorama-Fenster oben (wechselt automatisch, lässt sich ziehen/wischen, Pfeiltasten, Klick öffnet das Bild).
 
 ### Filmstills
 Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblendet. Sobald dort ein Film mit Stills steht, erscheint er automatisch (Beispiel im Kommentar in `content.js`).
