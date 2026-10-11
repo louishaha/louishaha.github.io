@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=3">
+  <link rel="stylesheet" href="assets/css/style.css?v=4">
   <script>
     try { var t = localStorage.getItem("lk-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
     document.documentElement.classList.add("js");
@@ -44,6 +44,9 @@
       <span class="nav__clock" data-clock></span>
       <button class="nav__theme" type="button" data-theme-toggle aria-label="Toggle light table mode">
         <span class="nav__theme-dot"></span><span data-theme-label>Light table</span>
+      </button>
+      <button class="nav__lock" type="button" data-lock aria-label="Privater Bereich" title="Privat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
       </button>
     </div>
   </header>
@@ -149,6 +152,20 @@
     </div>
   </div>
 
+  <!-- Private area (Gapyear route) -->
+  <div class="lock" role="dialog" aria-modal="true" aria-label="Code eingeben" data-lock-modal hidden>
+    <div class="lock__box">
+      <svg class="lock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
+      <p class="lock__title">Gap<em>year</em></p>
+      <div class="lock__code" data-lock-code>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4" aria-label="Vierstelliger Code" data-lock-input>
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <p class="lock__hint" data-lock-hint aria-live="polite"></p>
+      <button type="button" class="lock__cancel" data-lock-close>Abbrechen</button>
+    </div>
+  </div>
+
   <div class="cursor" aria-hidden="true">
     <div class="cursor__blob"></div>
     <span class="cursor__label" data-cursor-label></span>
@@ -159,5 +176,6 @@
   <script src="assets/js/content.js?v=3"></script>
   <script src="assets/js/warp.js?v=3"></script>
   <script src="assets/js/main.js?v=3"></script>
+  <script src="assets/js/lock.js?v=1"></script>
 </body>
 </html>
