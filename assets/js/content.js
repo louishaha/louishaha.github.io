@@ -24,8 +24,6 @@ window.PORTFOLIO = {
   ],
 
   about: {
-    statement:
-      "Fog, first light and animals that won’t sit still — pictures from mountains, forests and cities.",
     body: [
       "Louis Koller is a photographer. His work moves between landscape, wildlife and the street, with a soft spot for bad weather and early mornings.",
       "Available for commissions and collaborations.",

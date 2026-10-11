@@ -238,7 +238,6 @@
     P.coords || (years.length ? `${Math.min(...years)} — ${Math.max(...years)}` : "");
   $("[data-photo-count]").textContent = `${pad(photos.length)} Frames`;
 
-  $("[data-statement]").textContent = P.about?.statement || "";
   $("[data-about]").innerHTML = (P.about?.body || []).map((t) => `<p>${esc(t)}</p>`).join("");
 
   const contactBlock = {
@@ -333,7 +332,7 @@
   $("[data-hero-frame]").addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
 
   /* ------------------------------------------------------------------------
-     Photographs — grid + index
+     Photographs — grid
      ------------------------------------------------------------------------ */
   const grid = $("[data-grid]");
   grid.innerHTML = photos
@@ -421,60 +420,11 @@
     grid.addEventListener("pointerleave", () => { hoveredIdx = -1; });
   }
 
-  const indexList = $("[data-index-list]");
-  indexList.innerHTML = photos
-    .map((p, i) => `
-      <li><button class="index__row" type="button" data-open="${i}" data-cursor="View">
-        <span>${p.no}</span><span class="t">${esc(p.title)}</span><span>${esc(p.place || "—")}</span><span>${esc(p.camera || "—")}</span><span>${esc(p.year || "—")}</span>
-      </button></li>`)
-    .join("");
-  indexList.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-open]");
-    if (b) openLightbox(photos, +b.dataset.open);
-  });
-  indexList.addEventListener("pointerover", (e) => {
-    const b = e.target.closest(".index__row");
-    if (!b || b.contains(e.relatedTarget)) return;
-    const r = b.getBoundingClientRect();
-    b.style.setProperty("--x", `${e.clientX - r.left}px`);
-    b.style.setProperty("--y", `${e.clientY - r.top}px`);
-  });
-
-  // view toggle
-  const indexWrap = $("[data-index]");
-  const setView = (v) => {
-    $$("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
-    grid.hidden = v !== "grid";
-    indexWrap.hidden = v !== "index";
-    store.set("lk-view", v);
-    if (v === "grid") { layoutGrid(); $$(".ph", grid).forEach((el) => io.observe(el)); }
+  // view
+  const setView = () => {
+    layoutGrid(); $$(".ph", grid).forEach((el) => io.observe(el));
     requestAnimationFrame(measureStills);
   };
-  $$("[data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
-
-  // floating preview in index mode
-  const preview = $(".preview");
-  const previewImg = $("[data-preview-img]");
-  if (finePointer) {
-    let px = 0, py = 0, tx = 0, ty = 0, raf = 0;
-    const loop = () => {
-      px += (tx - px) * 0.16; py += (ty - py) * 0.16;
-      preview.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%)`;
-      raf = Math.abs(tx - px) + Math.abs(ty - py) > 0.3 ? requestAnimationFrame(loop) : 0;
-    };
-    indexList.addEventListener("pointermove", (e) => {
-      tx = e.clientX + 120; ty = e.clientY;
-      if (!preview.classList.contains("is-on")) { px = tx; py = ty; }
-      if (!raf) raf = requestAnimationFrame(loop);
-    });
-    indexList.addEventListener("pointerover", (e) => {
-      const b = e.target.closest("[data-open]");
-      if (!b) return;
-      photos[+b.dataset.open].thumb$().then((src) => { previewImg.src = src; });
-      preview.classList.add("is-on");
-    });
-    indexList.addEventListener("pointerleave", () => preview.classList.remove("is-on"));
-  }
 
   /* ------------------------------------------------------------------------
      Stills — film strip, pinned horizontal scroll
@@ -584,8 +534,7 @@
   );
   $$(".ph").forEach((el) => io.observe(el));
 
-  const savedView = store.get("lk-view");
-  setView(savedView === "index" ? "index" : "grid");
+  setView();
 
   /* ------------------------------------------------------------------------
      Smooth scrolling. macOS already scrolls with inertia; on Windows/Linux a
