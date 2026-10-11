@@ -23,3 +23,22 @@ python3 -m http.server 8080
 ```
 
 Dann http://localhost:8080 öffnen.
+
+## Route / Gapyear (`/route/`)
+
+Privater Bereich mit Karte, Route und Reise-Journal. Erreichbar über das Schloss oben rechts auf der Startseite (Code `2301`) oder direkt unter `/route/`.
+
+> Der Code ist nur ein Vorhang gegen Zufallsbesucher: Die Seite liegt öffentlich auf GitHub Pages, wer den Quellcode oder einen Bild-Link kennt, kommt ran. Nichts wirklich Privates einstellen.
+
+### Bearbeiten (nur du)
+1. `/route/admin.html` öffnen (in der Ansicht erscheint danach oben ein „Bearbeiten“-Knopf).
+2. Einmal pro Gerät mit GitHub verbinden: [Fine-grained token erstellen](https://github.com/settings/personal-access-tokens/new), nur dieses Repo, Permission **Contents: Read and write**, Ablauf nach Reiseende. Der Token bleibt nur im Browser.
+3. Orte anlegen (Suche oder auf die Karte tippen), Reihenfolge = Route, „Anreise mit“ = Verkehrsmittel.
+4. Unter **Standort** einstellen, wo du gerade bist: Alles davor ist „gereist“ (rote Linie), alles danach „geplant“ (gestrichelt). Optional GPS-Live-Position.
+5. Beiträge schreiben, Fotos/Videos anhängen (Fotos werden automatisch auf 2000 px verkleinert, Videos max. 95 MB, längere als YouTube-Link).
+6. **Veröffentlichen** → ein Commit ins Repo, nach ca. 1 Minute online. Unveröffentlichte Änderungen (inkl. Fotos) überleben einen Neustart des Browsers.
+
+### Dateien
+- `route/data/trip.json`: alle Daten (Orte, Beiträge, aktueller Standort), wird vom Admin geschrieben.
+- `route/media/<beitrag>/`: hochgeladene Fotos, Vorschaubilder, Videos.
+- `route/vendor/`: MapLibre GL JS 5.24.0 (lokal, kein CDN nötig). Satellitenbilder: Esri World Imagery.
