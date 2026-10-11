@@ -638,6 +638,7 @@
   }
   const step = (d) => { lbIdx = (lbIdx + d + lbList.length) % lbList.length; renderLb(); };
   $("[data-lb-close]").addEventListener("click", closeLightbox);
+  $("[data-lb-close-zone]").addEventListener("click", closeLightbox);
   $("[data-lb-prev]").addEventListener("click", () => step(-1));
   $("[data-lb-next]").addEventListener("click", () => step(1));
   addEventListener("keydown", (e) => {
