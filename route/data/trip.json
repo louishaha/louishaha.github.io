@@ -1,12 +1,37 @@
 {
   "version": 1,
-  "rev": 0,
+  "rev": 1,
   "title": "Gapyear",
   "subtitle": "",
   "start": "",
   "current": null,
   "here": null,
-  "stops": [],
+  "stops": [
+    {
+      "id": "s-mv3rjxtjapm6",
+      "name": "Berlin",
+      "country": "Deutschland",
+      "cc": "de",
+      "lat": 52.51739,
+      "lng": 13.39513,
+      "from": "",
+      "to": "2027-03-01",
+      "by": "plane",
+      "note": "Ab hier gehts los :)"
+    },
+    {
+      "id": "s-mv3rkxze0xsc",
+      "name": "Melbourne",
+      "country": "Australien",
+      "cc": "au",
+      "lat": -37.81425,
+      "lng": 144.96317,
+      "from": "2027-03-03",
+      "to": "",
+      "by": "plane",
+      "note": ""
+    }
+  ],
   "posts": [],
-  "updated": null
+  "updated": "2026-10-11T11:53:38.559Z"
 }
