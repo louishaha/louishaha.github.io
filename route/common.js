@@ -517,7 +517,8 @@
   /* Idle rotation for an empty globe */
   RT.spin = (map) => {
     let on = true, raf;
-    const stop = () => { on = false; cancelAnimationFrame(raf); };
+    map._spinning = true;
+    const stop = () => { on = false; map._spinning = false; cancelAnimationFrame(raf); };
     ["mousedown", "touchstart", "wheel", "dragstart"].forEach((e) => map.on(e, stop));
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return stop;
     let last = performance.now();

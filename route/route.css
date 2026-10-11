@@ -489,6 +489,7 @@ a.chip:hover, button.chip:hover { border-color: var(--line-strong); }
 .hint { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .hint a { color: #ffb3a4; }
 .hint code, .steps code { background: rgba(255, 255, 255, 0.06); padding: 1px 5px; border-radius: 4px; }
+.warn { margin: 12px 16px 0; padding: 10px 12px; border: 1px solid rgba(255, 179, 71, 0.5); border-radius: 10px; color: #ffd08a; }
 .steps { margin: 0; padding-left: 18px; color: rgba(235, 229, 217, 0.85); line-height: 1.7; }
 
 .field { display: grid; gap: 6px; min-width: 0; }

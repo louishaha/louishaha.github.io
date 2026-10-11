@@ -42,6 +42,7 @@
     sheet = s;
     panel.classList.toggle("is-half", s === "half");
     panel.classList.toggle("is-full", s === "full");
+    if (map && s !== "full") recentre(450);
   };
   const ensureSheet = (min) => {
     if (mobile.matches && SHEET.indexOf(sheet) < SHEET.indexOf(min)) setSheet(min);
@@ -93,6 +94,11 @@
       el.addEventListener("pointercancel", up);
     });
   })();
+
+  const recentre = (ms) => {
+    if (map._spinning || map.isMoving()) map.setPadding(padding());
+    else map.easeTo({ padding: padding(), duration: ms });
+  };
 
   const padding = () =>
     mobile.matches
@@ -406,6 +412,10 @@
     if (RT.store.get("lk-route-gh")) $("[data-admin-link]").hidden = false;
 
     map = RT.createMap("map", { controls: !mobile.matches, attribution: mobile.matches ? "top-right" : "bottom-left" });
+    // Keep the globe centred in the free area left of (or above) the panel
+    map.setPadding(padding());
+    let rz;
+    window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => recentre(300), 150); });
     layer = new RT.RouteLayer(map, { onStop: (id) => go("#/ort/" + id) });
 
     let trip;

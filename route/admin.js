@@ -947,6 +947,20 @@
     }
   };
 
+  // The live site must be served from the branch we write to; warn if it isn't
+  const checkSite = async (remote) => {
+    if (!remote.updated || Date.now() - Date.parse(remote.updated) < 15 * 60000) return;
+    try {
+      const res = await fetch(`${RT.DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+      const site = res.ok ? RT.normalize(await res.json()) : null;
+      if (site && (site.rev || 0) === (remote.rev || 0)) return;
+    } catch (e) { /* offline: no warning */ }
+    const box = document.createElement("p");
+    box.className = "hint warn";
+    box.innerHTML = `Achtung: Die Website zeigt einen anderen Stand als der Branch <code>${esc(branch)}</code>, in den hier gespeichert wird. Wahrscheinlich läuft GitHub Pages noch von einem anderen Branch (Repo → Settings → Pages → Branch: <code>${esc(branch)}</code>).`;
+    $(".adm__side").prepend(box);
+  };
+
   const loadTrip = async () => {
     setStatus("busy", "Lade Route …");
     const remote = await fetchRemoteTrip(branch);
@@ -970,6 +984,7 @@
       }
     }
     loaded = true;
+    checkSite(remote);
     render();
     refreshMap();
     if (layer && trip.stops.length) RT.onLoad(map, () => layer.fit({ top: 40, bottom: 40, left: 40, right: 40 }));
