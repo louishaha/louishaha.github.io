@@ -236,7 +236,7 @@
     const cc = (list) => new Set(list.map((s) => (s.country || s.cc || "").trim().toLowerCase()).filter(Boolean)).size;
     const kmDone = legs.filter((l) => l.status === "done").reduce((a, l) => a + l.km, 0);
     const kmAll = legs.reduce((a, l) => a + l.km, 0);
-    const start = trip.start || (stops[0] && stops[0].from) || "";
+    const start = trip.start || (stops[0] && (stops[0].from || stops[0].to)) || "";
     const today = RT.today();
     let days = null, daysLabel = "Tage";
     if (start) {
@@ -504,6 +504,21 @@
       const b = new maplibregl.LngLatBounds(pts[0], pts[0]);
       pts.forEach((p) => b.extend(p));
       model.legs.forEach((l) => l.mode === "plane" && b.extend(l.mid));
+      const spanX = b.getEast() - b.getWest(), spanY = b.getNorth() - b.getSouth();
+      if (spanX > 70 || spanY > 50) {
+        // Route spans a good part of the planet: show the whole globe, turned towards it
+        let x = 0, y = 0, z = 0;
+        pts.forEach(([lng, lat]) => {
+          const a = rad(lat), o = rad(lng);
+          x += Math.cos(a) * Math.cos(o); y += Math.cos(a) * Math.sin(o); z += Math.sin(a);
+        });
+        const center = [(Math.atan2(y, x) * 180) / Math.PI, (Math.atan2(z, Math.hypot(x, y)) * 180) / Math.PI];
+        const c = map.getContainer();
+        const free = Math.min(c.clientWidth - padding.left - padding.right, c.clientHeight - padding.top - padding.bottom);
+        const zoom = Math.max(0.6, Math.min(2.6, Math.log2((free * 0.92) / 163)));
+        map.easeTo({ center, zoom, padding, duration: animate ? 1600 : 0 });
+        return;
+      }
       map.fitBounds(b, { padding, maxZoom: 6, duration: animate ? 1600 : 0 });
     }
 

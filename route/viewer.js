@@ -124,16 +124,16 @@
   const renderHead = () => {
     const t = model.trip;
     $("[data-title]").innerHTML = t.title ? esc(t.title).replace(/year$/i, (m) => `<em>${m}</em>`) : "Gap<em>year</em>";
-    $("[data-sub]").textContent = t.subtitle || "Route & Journal";
+    $("[data-sub]").textContent = [t.subtitle || "Route & Journal", model.current || !model.stops.length ? "" : "Geplant"].filter(Boolean).join(" · ");
     document.title = `${t.title || "Gapyear"} — Louis Koller`;
 
     const st = model.stats;
     const started = !!model.current;
     const cells = [
       [st.days ?? "–", st.days == null ? "Tage" : st.daysLabel],
-      [started ? st.countries : st.countriesAll, started ? (st.countries === 1 ? "Land" : "Länder") : "Länder geplant"],
-      [RT.fmtKm(started ? st.km : st.kmAll), started ? "Kilometer" : "km geplant"],
-      [started ? st.places : st.placesAll, started ? (st.places === 1 ? "Ort" : "Orte") : "Orte geplant"],
+      [started ? st.countries : st.countriesAll, (started ? st.countries : st.countriesAll) === 1 ? "Land" : "Länder"],
+      [RT.fmtKm(started ? st.km : st.kmAll), "Kilometer"],
+      [started ? st.places : st.placesAll, (started ? st.places : st.placesAll) === 1 ? "Ort" : "Orte"],
     ];
     $("[data-stats]").innerHTML = cells
       .map(([v, l]) => `<div class="stat"><span class="stat__v">${esc(v)}</span><span class="stat__l">${esc(l)}</span></div>`)
