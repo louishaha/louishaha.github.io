@@ -292,24 +292,38 @@
   });
 
   /* ------------------------------------------------------------------------
-     Hero — darkroom. The photograph only shows inside a soft pool of light
-     that follows the pointer (or drifts by itself when nobody moves it).
-     Every few seconds a new print comes up out of the developer.
+     Hero — full-bleed photographs behind the name. Each one opens like a
+     shutter; the ticks show progress and jump to a frame when clicked.
      ------------------------------------------------------------------------ */
   const heroSet = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
   const hero = $("[data-hero]");
-  const heroLight = $("[data-hero-light]");
+  const heroBg = $("[data-hero-bg]");
   const heroImgs = [$("[data-hero-a]"), $("[data-hero-b]")];
   const heroCap = $("[data-hero-caption]");
-  const heroHint = $("[data-hero-hint]");
+  const ticks = $("[data-hero-ticks]");
+  const HERO_MS = 6500;
   let heroIdx = 0;
   let heroFront = 0;
+  let heroTimer;
+
+  ticks.innerHTML = heroSet.map((p, i) => `<button type="button" class="hero__tick" data-tick="${i}" aria-label="Show ${esc(p.title)}"></button>`).join("");
+  ticks.style.setProperty("--dur", `${HERO_MS}ms`);
+  const tickEls = $$("[data-tick]", ticks);
 
   function showHero(i) {
     const p = heroSet[i];
     if (!p) return;
+    heroIdx = i;
+    tickEls.forEach((t, j) => {
+      t.classList.toggle("is-done", j < i);
+      t.classList.remove("is-on");
+    });
+    void ticks.offsetWidth;
+    if (!reduceMotion) tickEls[i].classList.add("is-on");
+    heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
     const img = heroImgs[heroFront ^ 1];
     p.src$().then((src) => {
+      if (heroIdx !== i) return;
       const swap = () => {
         heroImgs[heroFront].classList.remove("is-front");
         heroImgs[heroFront].classList.add("is-back");
@@ -317,75 +331,39 @@
         void img.offsetWidth;
         img.classList.add("is-front");
         heroFront ^= 1;
-        heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
-        // the print underneath is no longer needed once the new one is up
-        setTimeout(() => { if (!heroImgs[heroFront ^ 1].classList.contains("is-front")) heroImgs[heroFront ^ 1].classList.remove("is-back"); }, 2400);
       };
       if (img.src.endsWith(src) && img.complete) swap();
       else { img.onload = swap; img.src = src; }
     });
+    heroSet[(i + 1) % heroSet.length].src$(); // warm cache for the next frame
   }
-  showHero(0);
-  if (heroSet[1]) heroSet[1].src$(); // warm cache for the next print
-  if (!reduceMotion && heroSet.length > 1) {
-    setInterval(() => {
-      if (document.hidden || !heroOn) return;
-      heroIdx = (heroIdx + 1) % heroSet.length;
-      showHero(heroIdx);
-      heroSet[(heroIdx + 1) % heroSet.length].src$();
-    }, 5200);
-  }
-  heroLight.addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
-
-  // the light
-  let heroOn = true;
-  let hw = 0, hh = 0, hTop = 0;
-  const measureHero = () => { const r = hero.getBoundingClientRect(); hw = r.width; hh = r.height; hTop = r.top + scrollY; };
-  measureHero();
-  addEventListener("resize", measureHero, { passive: true });
-  let lightRunning = false;
-  const startLight = () => { if (lightRunning) return; lightRunning = true; lastT = performance.now(); requestAnimationFrame(lightLoop); };
-  new IntersectionObserver(([e]) => { heroOn = e.isIntersecting; if (heroOn) startLight(); }).observe(hero);
-
-  let lx = hw / 2, ly = hh / 2, tx = lx, ty = ly, lr = 0;
-  let lastMove = -1e9, moved = false, lastT = performance.now();
-  const follow = (cx, cy) => {
-    tx = cx; ty = cy + scrollY - hTop; lastMove = performance.now();
-    if (!moved) { moved = true; heroHint.classList.add("is-gone"); }
+  const queueHero = () => {
+    clearTimeout(heroTimer);
+    if (reduceMotion || heroSet.length < 2) return;
+    heroTimer = setTimeout(() => { showHero((heroIdx + 1) % heroSet.length); queueHero(); }, HERO_MS);
   };
-  hero.addEventListener("pointermove", (e) => follow(e.clientX, e.clientY), { passive: true });
-  hero.addEventListener("touchmove", (e) => follow(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  showHero(0);
+  queueHero();
+  ticks.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-tick]");
+    if (!t) return;
+    showHero(Number(t.dataset.tick));
+    queueHero();
+  });
+  heroBg.addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
 
-  const ease = (rate, dt) => 1 - Math.pow(1 - rate, dt / 16.67);
-  function lightLoop(now) {
-    if (!heroOn) { lightRunning = false; return; }
-    const dt = Math.min(64, now - lastT);
-    lastT = now;
-    const ready = document.body.classList.contains("is-ready");
-    const small = hw < 760;
-    let base = Math.max(hw, hh) * (small ? 0.62 : 0.36);
-    if (reduceMotion) {
-      tx = hw * 0.5; ty = hh * 0.5; base = Math.max(hw, hh) * 0.75;
-    } else if (now - lastMove > 2600) {
-      // nobody is holding the light: let it drift slowly through the frame
-      const t = now / 1000;
-      tx = hw * (0.5 + 0.3 * Math.sin(t * 0.23) + 0.06 * Math.sin(t * 0.71));
-      ty = hh * (0.48 + 0.2 * Math.sin(t * 0.31 + 1.3));
-    }
-    const px = lx, py = ly;
-    const follow = now - lastMove < 2600 ? 0.12 : 0.03;
-    lx += (tx - lx) * ease(follow, dt);
-    ly += (ty - ly) * ease(follow, dt);
-    // a fast swing narrows the beam a little, it opens again when it rests
-    const speed = Math.hypot(lx - px, ly - py) * (16.67 / dt);
-    const want = ready ? base * (1 - Math.min(speed / 90, 0.3)) : 0;
-    lr += (want - lr) * ease(ready && lr < base * 0.5 ? 0.035 : 0.08, dt);
-    heroLight.style.setProperty("--x", `${lx.toFixed(1)}px`);
-    heroLight.style.setProperty("--y", `${ly.toFixed(1)}px`);
-    heroLight.style.setProperty("--r", `${Math.max(1, lr).toFixed(1)}px`);
-    requestAnimationFrame(lightLoop);
+  // scrolling away: the photograph lags behind and dims
+  if (!reduceMotion) {
+    let ticking = false;
+    const onScroll = () => {
+      ticking = false;
+      const h = hero.offsetHeight;
+      const y = Math.min(scrollY, h);
+      heroBg.style.setProperty("--py", `${(y * 0.35).toFixed(1)}px`);
+      heroBg.style.setProperty("--dim", (0.12 + (y / h) * 0.6).toFixed(3));
+    };
+    addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
   }
-  startLight();
 
   /* ------------------------------------------------------------------------
      Photographs — grid

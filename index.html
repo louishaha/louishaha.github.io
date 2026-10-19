@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=5">
+  <link rel="stylesheet" href="assets/css/style.css?v=7">
   <script>
     try { var t = localStorage.getItem("lk-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
     document.documentElement.classList.add("js");
@@ -54,10 +54,11 @@
   <main id="top">
     <!-- Hero -->
     <section class="hero" data-hero>
-      <!-- Darkroom: the photograph is only visible where the "safelight" falls -->
-      <div class="hero__light" data-hero-light aria-hidden="true">
+      <!-- Full-bleed photographs behind the name -->
+      <div class="hero__bg" data-hero-bg aria-hidden="true">
         <img alt="" data-hero-a>
         <img alt="" data-hero-b>
+        <span class="hero__shade"></span>
       </div>
 
       <div class="hero__meta">
@@ -78,7 +79,7 @@
 
       <div class="hero__foot">
         <a href="#photographs" class="hero__scroll">Scroll <span aria-hidden="true">↓</span></a>
-        <span class="hero__hint" data-hero-hint><span class="hero__hint-dot"></span>Move to develop</span>
+        <span class="hero__ticks" data-hero-ticks></span>
         <span class="hero__caption" data-hero-caption></span>
       </div>
     </section>
@@ -178,7 +179,7 @@
 
   <script src="assets/js/content.js?v=3"></script>
   <script src="assets/js/warp.js?v=3"></script>
-  <script src="assets/js/main.js?v=4"></script>
+  <script src="assets/js/main.js?v=6"></script>
   <script src="assets/js/lock.js?v=1"></script>
 </body>
 </html>

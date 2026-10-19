@@ -161,9 +161,8 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 }
 
 /* Hero -------------------------------------------------------------------
-   Darkroom: the page is dark and the photograph only shows where the
-   "safelight" falls. JS moves the light (--x, --y, --r) with the pointer,
-   or lets it drift on its own. The name sits on top as a negative.       */
+   A full-bleed photograph behind the name. Each new one opens like a
+   shutter and drifts slowly while it is up; scrolling pulls it away.    */
 .hero {
   position: relative;
   isolation: isolate;
@@ -174,36 +173,39 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   padding: 68px var(--gutter) var(--gutter);
   gap: 24px;
   overflow: hidden;
+  color: #f1ece2;
 }
-.hero > :not(.hero__light) { position: relative; z-index: 1; }
+.hero > :not(.hero__bg) { position: relative; z-index: 1; }
 
-.hero__light {
-  --x: 50%; --y: 50%; --r: 0px;
-  position: absolute; inset: 0; z-index: 0;
-  cursor: pointer;
-  -webkit-mask-image: radial-gradient(circle var(--r) at var(--x) var(--y), #000 0%, rgba(0, 0, 0, 0.92) 30%, rgba(0, 0, 0, 0.45) 62%, transparent 100%);
-          mask-image: radial-gradient(circle var(--r) at var(--x) var(--y), #000 0%, rgba(0, 0, 0, 0.92) 30%, rgba(0, 0, 0, 0.45) 62%, transparent 100%);
-}
-.hero__light img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
+.hero__bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0d0c0a; cursor: pointer; }
+.hero__bg img {
+  position: absolute; inset: -4% 0; width: 100%; height: 108%;
   object-fit: cover;
   opacity: 0;
+  translate: 0 var(--py, 0px);
 }
-/* a warm safelight fringe around the edge of the light */
-.hero__light::after {
-  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
-  background: radial-gradient(circle var(--r) at var(--x) var(--y), transparent 38%, rgba(255, 59, 31, 0.32) 78%, transparent 100%);
-  mix-blend-mode: screen;
+.hero__bg img.is-back { opacity: 1; z-index: 1; }
+.hero__bg img.is-front {
+  opacity: 1; z-index: 2;
+  animation: shutter 1.5s var(--ease-io) both, drift 9s linear both;
 }
-.hero__light img.is-front { z-index: 2; opacity: 1; animation: develop 2.4s var(--ease) both; }
-.hero__light img.is-back { z-index: 1; opacity: 1; }
-/* new prints come up out of the developer: dark, warm, low contrast → full */
-@keyframes develop {
-  0% { opacity: 0; filter: brightness(0.15) sepia(1) saturate(4) hue-rotate(-28deg) contrast(0.7); }
-  35% { opacity: 1; }
-  100% { opacity: 1; filter: none; }
+@keyframes shutter {
+  from { clip-path: inset(0 50% 0 50%); }
+  to { clip-path: inset(0 0 0 0); }
 }
-@media (prefers-reduced-motion: reduce) { .hero__light img.is-front { animation: none; } }
+@keyframes drift {
+  from { scale: 1.14; }
+  to { scale: 1.02; }
+}
+@media (prefers-reduced-motion: reduce) { .hero__bg img.is-front { animation: none; } }
+/* keeps the type and the small print readable on any photograph */
+.hero__shade {
+  position: absolute; inset: 0; z-index: 3;
+  background:
+    linear-gradient(180deg, rgba(8, 7, 6, 0.55) 0%, rgba(8, 7, 6, 0) 22%),
+    linear-gradient(0deg, rgba(8, 7, 6, 0.7) 0%, rgba(8, 7, 6, 0.15) 45%, rgba(8, 7, 6, 0.05) 70%),
+    rgba(8, 7, 6, var(--dim, 0.12));
+}
 
 .hero__meta,
 .hero__foot {
@@ -217,7 +219,8 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   pointer-events: none;
 }
 .hero__meta a, .hero__foot a { pointer-events: auto; }
-.hero__meta { border-top: 1px solid var(--line); padding-top: 10px; }
+.hero__meta, .hero__foot { color: rgba(241, 236, 226, 0.68); }
+.hero__meta { border-top: 1px solid rgba(241, 236, 226, 0.22); padding-top: 10px; }
 .hero__meta-r { text-align: right; }
 
 .hero__name {
@@ -237,20 +240,20 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 .hero__word { display: inline-block; }
 .hero__name em { padding-right: 0.04em; }
 
-/* In the darkroom the type prints as a negative of whatever is under it */
-:root:not([data-theme="light"]) .hero > :not(.hero__light) { mix-blend-mode: difference; }
-
 .hero__foot { align-items: end; }
-.hero__scroll { color: var(--fg); }
-.hero__hint { display: inline-flex; align-items: center; gap: 10px; transition: opacity 0.8s var(--ease); }
-.hero__hint.is-gone { opacity: 0; }
-.hero__hint-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
-  box-shadow: 0 0 14px 3px rgba(255, 59, 31, 0.5);
-  animation: pulse 1.2s ease-in-out infinite alternate;
+.hero__scroll { color: #f1ece2; }
+.hero__ticks { display: flex; gap: 6px; align-self: center; pointer-events: auto; }
+.hero__tick { position: relative; width: 26px; height: 14px; }
+.hero__tick::before, .hero__tick::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px;
+  background: rgba(241, 236, 226, 0.28);
 }
+.hero__tick::after { background: #f1ece2; transform: scaleX(0); transform-origin: left; }
+.hero__tick.is-done::after { transform: scaleX(1); }
+.hero__tick.is-on::after { animation: tick var(--dur, 6s) linear both; }
+@keyframes tick { to { transform: scaleX(1); } }
 .hero__caption { grid-column: 3 / 5; text-align: right; font-variant-numeric: tabular-nums; }
-.hero__caption b { color: var(--fg); font-weight: 400; }
+.hero__caption b { color: #f1ece2; font-weight: 400; }
 
 /* Intro reveal for hero words */
 .js .hero__word { transition: transform 1.3s var(--ease), clip-path 1.3s var(--ease); }
@@ -264,7 +267,7 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   .hero__meta-r { grid-column: 1 / 3; text-align: left; }
   .hero__name { font-size: 27vw; }
   .hero__foot { grid-template-columns: 1fr; row-gap: 6px; }
-  .hero__hint { display: none; }
+  .hero__ticks { order: -1; }
   .hero__caption { grid-column: auto; text-align: left; }
 }
 
