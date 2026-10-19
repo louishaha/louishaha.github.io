@@ -474,7 +474,7 @@
     const idx = trip.stops.indexOf(s);
     return `
     <div class="pane">
-      <button class="back" type="button" data-act="close">← Alle Orte</button>
+      <button class="back" type="button" data-act="close">Alle Orte</button>
       <h2 class="pane__t">${editing.isNew ? "Neuer Ort" : "Ort bearbeiten"}</h2>
       <div class="field">
         <span>Ort suchen</span>
@@ -518,7 +518,7 @@
     const p = editing.obj;
     return `
     <div class="pane">
-      <button class="back" type="button" data-act="close">← Alle Beiträge</button>
+      <button class="back" type="button" data-act="close">Alle Beiträge</button>
       <h2 class="pane__t">Beitrag</h2>
       <label class="field"><span>Titel</span><input class="inp" type="text" data-f="title" value="${esc(p.title)}" placeholder="z. B. Erster Tag in Bangkok"></label>
       <div class="field2">

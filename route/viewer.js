@@ -35,57 +35,134 @@
     RT.store.set(READ, JSON.stringify([...read].slice(-500)));
   };
 
+  /* ------------------------------------------------------------ Motion
+     Springs (damping ratio + response, as in UIKit) start from the value on
+     screen and carry the finger's velocity, so every animation can be
+     caught mid-flight and thrown again. */
+  const spring = (from, to, velocity, { damping = 1, response = 0.4 } = {}, onFrame, onDone) => {
+    if (reduceMotion) {
+      onFrame(to, 0);
+      onDone && onDone();
+      return { stop() {}, value: to };
+    }
+    const k = ((2 * Math.PI) / response) ** 2;
+    const c = (4 * Math.PI * damping) / response;
+    let x = from, v = velocity || 0, last = null, raf = 0, live = true;
+    const tick = (t) => {
+      if (!live) return;
+      const dt = last == null ? 1 / 60 : Math.min(0.05, (t - last) / 1000);
+      last = t;
+      const n = Math.max(1, Math.ceil(dt / 0.004)), h = dt / n;
+      for (let i = 0; i < n; i++) { v += (-k * (x - to) - c * v) * h; x += v * h; }
+      if (Math.abs(x - to) < 0.3 && Math.abs(v) < 6) {
+        live = false;
+        onFrame(to, 0);
+        onDone && onDone();
+        return;
+      }
+      onFrame(x, v);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return { stop() { live = false; cancelAnimationFrame(raf); }, get value() { return x; } };
+  };
+  // Where a flick would come to rest (scroll-view deceleration)
+  const project = (v, rate = 0.995) => ((v / 1000) * rate) / (1 - rate);
+  // Progressive resistance past an edge
+  const rubberband = (over, dim, k = 0.55) => (over * dim * k) / (dim + k * Math.abs(over));
+  // Pointer velocity (px/s) from the last ~100 ms of samples
+  const tracker = () => {
+    let pts = [];
+    return {
+      add(e) { pts.push([e.clientX, e.clientY, e.timeStamp]); if (pts.length > 20) pts.shift(); },
+      velocity(t) {
+        const recent = pts.filter((p) => t - p[2] < 100);
+        if (recent.length < 2) return { x: 0, y: 0 };
+        const a = recent[0], b = recent[recent.length - 1], dt = (b[2] - a[2]) / 1000;
+        return dt > 0 ? { x: (b[0] - a[0]) / dt, y: (b[1] - a[1]) / dt } : { x: 0, y: 0 };
+      },
+      reset() { pts = []; },
+    };
+  };
+
   /* ------------------------------------------------------- Bottom sheet */
   const SHEET = ["peek", "half", "full"];
   let sheet = "peek";
-  const setSheet = (s) => {
+  let sheetAnim = null;
+  const heightFor = (st) => {
+    if (st === "full") return window.innerHeight * 0.88;
+    if (st === "half") return window.innerHeight * 0.52;
+    return (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 188) + (parseFloat(getComputedStyle(panel).paddingBottom) || 0);
+  };
+  const sheetHeight = () => panel.getBoundingClientRect().height;
+  const settleSheet = (velocity = 0) => {
+    sheetAnim && sheetAnim.stop();
+    if (!mobile.matches) { panel.style.height = ""; return; }
+    // A little overshoot only when the sheet was thrown
+    const thrown = Math.abs(velocity) > 300;
+    sheetAnim = spring(sheetHeight(), heightFor(sheet), velocity, { damping: thrown ? 0.84 : 1, response: thrown ? 0.34 : 0.4 }, (h) => {
+      panel.style.height = h + "px";
+    });
+  };
+  const setSheet = (s, velocity) => {
     sheet = s;
     panel.classList.toggle("is-half", s === "half");
     panel.classList.toggle("is-full", s === "full");
+    settleSheet(velocity);
     if (map && s !== "full") recentre(450);
   };
   const ensureSheet = (min) => {
     if (mobile.matches && SHEET.indexOf(sheet) < SHEET.indexOf(min)) setSheet(min);
   };
+  mobile.addEventListener?.("change", () => settleSheet());
 
   (() => {
     const grab = [$("[data-handle]"), $("[data-head]")];
-    let startY = 0, startH = 0, dragging = false, moved = false, lastY = 0, lastT = 0, v = 0;
-    const heightFor = (st) => {
-      const peek = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 186) + (parseFloat(getComputedStyle(panel).paddingBottom) || 0);
-      return st === "full" ? window.innerHeight * 0.88 : st === "half" ? window.innerHeight * 0.52 : peek;
-    };
+    const track = tracker();
+    let startY = 0, startH = 0, dragging = false, moved = false, fromHead = false;
     const down = (e) => {
-      if (!mobile.matches) return;
-      if (sheet === "full" && e.currentTarget.hasAttribute("data-head")) return;
+      if (!mobile.matches || e.button > 0) return;
+      // Catch the sheet wherever it is right now
+      sheetAnim && sheetAnim.stop();
       dragging = true; moved = false;
-      startY = lastY = e.clientY;
-      startH = panel.offsetHeight;
-      lastT = performance.now(); v = 0;
+      fromHead = e.currentTarget.hasAttribute("data-head");
+      startY = e.clientY;
+      startH = sheetHeight();
+      track.reset(); track.add(e);
       e.currentTarget.setPointerCapture?.(e.pointerId);
     };
     const move = (e) => {
       if (!dragging) return;
+      track.add(e);
       const dy = e.clientY - startY;
-      if (!moved && Math.abs(dy) < 5) return;
+      if (!moved && Math.abs(dy) < 6) return;
       if (!moved) { moved = true; panel.classList.add("is-dragging"); }
-      const now = performance.now();
-      v = (e.clientY - lastY) / Math.max(1, now - lastT);
-      lastY = e.clientY; lastT = now;
-      panel.style.height = Math.max(heightFor("peek"), Math.min(heightFor("full"), startH - dy)) + "px";
+      const lo = heightFor("peek"), hi = heightFor("full");
+      let h = startH - dy;
+      if (h > hi) h = hi + rubberband(h - hi, window.innerHeight);
+      else if (h < lo) h = lo - rubberband(lo - h, window.innerHeight);
+      panel.style.height = h + "px";
     };
     const up = (e) => {
       if (!dragging) return;
       dragging = false;
       panel.classList.remove("is-dragging");
-      panel.style.height = "";
       if (!moved) {
+        if (e.type === "pointercancel") return settleSheet();
+        if (fromHead && sheet === "full") return settleSheet();
         setSheet(sheet === "peek" ? "half" : sheet === "half" ? "full" : "half");
         return;
       }
-      const h = startH - (e.clientY - startY) - v * 180;
-      const best = SHEET.map((st) => [st, Math.abs(heightFor(st) - h)]).sort((x, y) => x[1] - y[1])[0][0];
-      setSheet(best);
+      const v = -track.velocity(e.timeStamp).y; // px/s, positive = growing
+      const h = sheetHeight();
+      const target = h + project(v);
+      let best = SHEET.reduce((a, st) => (Math.abs(heightFor(st) - target) < Math.abs(heightFor(a) - target) ? st : a), "peek");
+      // A deliberate flick always moves in its own direction
+      if (Math.abs(v) > 400 && (heightFor(best) - h) * v <= 0) {
+        const ahead = SHEET.filter((st) => (v > 0 ? heightFor(st) > h + 1 : heightFor(st) < h - 1));
+        if (ahead.length) best = v > 0 ? ahead[0] : ahead[ahead.length - 1];
+      }
+      setSheet(best, v);
     };
     grab.forEach((el) => {
       el.addEventListener("pointerdown", down);
@@ -102,7 +179,7 @@
 
   const padding = () =>
     mobile.matches
-      ? { top: 70, left: 30, right: 30, bottom: sheet === "peek" ? 200 : window.innerHeight * 0.52 + 30 }
+      ? { top: 70, left: 30, right: 30, bottom: sheet === "peek" ? heightFor("peek") + 16 : window.innerHeight * 0.52 + 30 }
       : { top: 70, left: 50, bottom: 50, right: panel.offsetWidth + 60 };
 
   /* ------------------------------------------------------------ Render */
@@ -195,7 +272,7 @@
     const prev = model.stops[i - 1], next = model.stops[i + 1];
     const posts = model.posts.filter((p) => p.stop === s.id).reverse();
     return `<div class="view">
-      <button class="back" type="button" data-go="#/orte">← Alle Orte</button>
+      <button class="back" type="button" data-go="#/orte">Alle Orte</button>
       <p class="eyebrow">Station ${String(i + 1).padStart(2, "0")} / ${String(model.stops.length).padStart(2, "0")}${s.country ? " · " + esc(s.country) : ""}</p>
       <h2 class="detail__title">${esc(s.name)}</h2>
       <div class="detail__meta">
@@ -228,7 +305,7 @@
     const older = list[i - 1], newer = list[i + 1];
     const backLabel = backTo.startsWith("#/ort/") ? (model.stops.find((s) => "#/ort/" + s.id === backTo)?.name || "Zurück") : backTo === "#/orte" ? "Alle Orte" : "Journal";
     return `<div class="view">
-      <button class="back" type="button" data-go="${esc(backTo)}">← ${esc(backLabel)}</button>
+      <button class="back" type="button" data-go="${esc(backTo)}">${esc(backLabel)}</button>
       <p class="eyebrow">${esc(RT.fmtDate(p.date))}${p.stopObj ? ` · <a href="#/ort/${esc(p.stopObj.id)}">${stopName(p.stopObj)}</a>${p.stopObj.country && p.stopObj.country !== p.stopObj.name ? ", " + esc(p.stopObj.country) : ""}` : ""}</p>
       <h2 class="detail__title">${esc(p.title || "Ohne Titel")}</h2>
       ${p.media.length ? `<div class="gallery">${p.media.map(galleryItem).join("")}</div>` : ""}
@@ -246,6 +323,7 @@
 
   /* ------------------------------------------------------------ Router */
   let currentPost = null;
+  let lastDepth = 0;
   const setTab = (name) => {
     $$("[data-tab]").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === name));
     const sort = $("[data-sort]");
@@ -290,6 +368,10 @@
       setTab("journal");
       layer && layer.setActive(null);
     }
+    // Deeper views push in from the right, going back slides in from the left
+    const depth = kind === "post" && currentPost ? 2 : html.includes('class="back"') ? 1 : 0;
+    body.dataset.dir = depth > lastDepth ? "fwd" : depth < lastDepth ? "back" : "";
+    lastDepth = depth;
     body.innerHTML = html;
     body.scrollTop = 0;
     renderHead();
@@ -345,60 +427,161 @@
     else prompt("Link kopieren:", url);
   };
 
-  /* ---------------------------------------------------------- Lightbox */
+  /* ---------------------------------------------------------- Lightbox
+     A pager: neighbours sit left and right of the current item, the track
+     follows the finger 1:1, a flick pages, a pull down dismisses. */
   const lb = $("[data-lb]");
+  const stage = $("[data-lb-stage]");
   const lbMedia = $("[data-lb-media]");
   let lbItems = [], lbIdx = 0, lbReturn = null;
+  let lbX = 0, lbY = 0, lbAnimX = null, lbAnimY = null, lbDragged = false;
+  const pageW = () => stage.clientWidth + 24; // matches .lb__slide--prev/--next
 
+  const paintLb = () => {
+    const down = Math.max(0, lbY);
+    lbMedia.style.transform = lbX || lbY ? `translate3d(${lbX}px, ${lbY}px, 0) scale(${1 - Math.min(0.3, down / 1500)})` : "";
+    lb.style.setProperty("--fade", String(1 - Math.min(1, down / 420)));
+  };
+  const stopLb = () => {
+    lbAnimX && lbAnimX.stop();
+    lbAnimY && lbAnimY.stop();
+    lbAnimX = lbAnimY = null;
+  };
+
+  const slideHtml = (m, full) => {
+    if (!m) return "";
+    if (!full) {
+      const t = m.type === "img" ? RT.mediaSrc(m) : RT.mediaThumb(m);
+      return t ? `<img src="${esc(t)}" alt="">` : "";
+    }
+    if (m.type === "img") return `<img src="${esc(RT.mediaSrc(m))}" alt="${esc(m.caption || "")}">`;
+    if (m.type === "yt") return `<iframe src="https://www.youtube-nocookie.com/embed/${esc(m.id)}?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Video"></iframe>`;
+    return `<video src="${esc(RT.mediaSrc(m))}" controls autoplay playsinline ${m.poster ? `poster="${esc(m.poster)}"` : ""}></video>`;
+  };
   const lbShow = (i) => {
-    lbIdx = (i + lbItems.length) % lbItems.length;
+    const n = lbItems.length;
+    lbIdx = (i + n) % n;
     const m = lbItems[lbIdx];
-    let el;
-    if (m.type === "img") el = `<img src="${esc(RT.mediaSrc(m))}" alt="${esc(m.caption || "")}">`;
-    else if (m.type === "yt") el = `<iframe src="https://www.youtube-nocookie.com/embed/${esc(m.id)}?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Video"></iframe>`;
-    else el = `<video src="${esc(RT.mediaSrc(m))}" controls autoplay playsinline ${m.poster ? `poster="${esc(m.poster)}"` : ""}></video>`;
-    lbMedia.innerHTML = el;
-    $("[data-lb-count]").textContent = `${String(lbIdx + 1).padStart(2, "0")} / ${String(lbItems.length).padStart(2, "0")}`;
+    const side = (j, cls) => `<div class="lb__slide lb__slide--${cls}" aria-hidden="true">${slideHtml(lbItems[(j + n) % n])}</div>`;
+    lbMedia.innerHTML = (n > 1 ? side(lbIdx - 1, "prev") : "") + `<div class="lb__slide">${slideHtml(m, true)}</div>` + (n > 1 ? side(lbIdx + 1, "next") : "");
+    lbX = lbY = 0;
+    paintLb();
+    $("[data-lb-count]").textContent = `${lbIdx + 1} von ${n}`;
     $("[data-lb-cap]").textContent = m.caption || "";
-    // Preload neighbours
-    [lbIdx + 1, lbIdx - 1].forEach((j) => {
-      const n = lbItems[(j + lbItems.length) % lbItems.length];
-      if (n && n.type === "img") new Image().src = RT.mediaSrc(n);
+  };
+  // Slide the neighbour in, carrying any velocity the finger left behind
+  const page = (dir, velocity = 0) => {
+    if (lbItems.length < 2) return;
+    stopLb();
+    if (lbY) lbAnimY = spring(lbY, 0, 0, { response: 0.3 }, (y) => { lbY = y; paintLb(); });
+    lbAnimX = spring(lbX, -dir * pageW(), velocity, { damping: 1, response: 0.32 }, (x) => { lbX = x; paintLb(); }, () => {
+      lbAnimX = null;
+      lbShow(lbIdx + dir);
     });
   };
   const openLightbox = (items, i) => {
     lbItems = items;
     lbReturn = document.activeElement;
+    stopLb();
+    lb.classList.remove("is-closing", "is-opening");
     lb.hidden = false;
     lb.classList.toggle("is-single", items.length < 2);
     lbShow(i);
+    void lb.offsetWidth;
+    lb.classList.add("is-opening");
     $("[data-lb-close]").focus();
   };
-  const closeLightbox = () => {
+  lbMedia.addEventListener("animationend", () => lb.classList.remove("is-opening"));
+  const finishClose = () => {
+    stopLb();
     lb.hidden = true;
+    lb.classList.remove("is-closing", "is-opening");
     lbMedia.innerHTML = "";
+    lbX = lbY = 0;
+    paintLb();
     lbReturn && lbReturn.focus && lbReturn.focus();
   };
-  $("[data-lb-close]").addEventListener("click", closeLightbox);
-  $("[data-lb-prev]").addEventListener("click", () => lbShow(lbIdx - 1));
-  $("[data-lb-next]").addEventListener("click", () => lbShow(lbIdx + 1));
-  lbMedia.addEventListener("click", (e) => { if (e.target === lbMedia) closeLightbox(); });
+  const closeLightbox = (velocity) => {
+    stopLb();
+    if (typeof velocity === "number") {
+      // Thrown down: keep going the way the finger went
+      lbAnimY = spring(lbY, stage.clientHeight, Math.max(velocity, 400), { damping: 1, response: 0.35 }, (y) => { lbY = y; paintLb(); }, finishClose);
+      return;
+    }
+    if (reduceMotion) return finishClose();
+    lb.classList.remove("is-opening");
+    lb.classList.add("is-closing");
+    setTimeout(finishClose, 280);
+  };
+  $("[data-lb-close]").addEventListener("click", () => closeLightbox());
+  $("[data-lb-prev]").addEventListener("click", () => page(-1));
+  $("[data-lb-next]").addEventListener("click", () => page(1));
+  lbMedia.addEventListener("click", (e) => {
+    if (lbDragged) { lbDragged = false; return; }
+    if (e.target === lbMedia || e.target.classList.contains("lb__slide")) closeLightbox();
+  });
   document.addEventListener("keydown", (e) => {
     if (lb.hidden) return;
     if (e.key === "Escape") closeLightbox();
-    else if (e.key === "ArrowLeft" && lbItems.length > 1) lbShow(lbIdx - 1);
-    else if (e.key === "ArrowRight" && lbItems.length > 1) lbShow(lbIdx + 1);
+    else if (e.key === "ArrowLeft") page(-1);
+    else if (e.key === "ArrowRight") page(1);
   });
   (() => {
-    let x0 = null, y0 = 0;
-    const stage = $("[data-lb-stage]");
-    stage.addEventListener("touchstart", (e) => { if (e.touches.length === 1) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } }, { passive: true });
-    stage.addEventListener("touchend", (e) => {
-      if (x0 == null || lbItems.length < 2) return;
-      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
-      x0 = null;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) lbShow(lbIdx + (dx < 0 ? 1 : -1));
+    const track = tracker();
+    let id = null, sx = 0, sy = 0, bx = 0, by = 0, axis = null;
+    stage.addEventListener("dragstart", (e) => e.preventDefault());
+    stage.addEventListener("pointerdown", (e) => {
+      if (id !== null || e.button > 0 || lb.classList.contains("is-closing") || e.target.closest("button, iframe")) return;
+      if (e.pointerType === "mouse" && e.target.closest("video")) return; // leave video controls alone
+      stopLb();
+      lb.classList.remove("is-opening");
+      id = e.pointerId;
+      sx = e.clientX; sy = e.clientY; bx = lbX; by = lbY;
+      // Caught mid-flight: carry on along the same axis
+      axis = Math.abs(lbX) > 0.5 ? "x" : Math.abs(lbY) > 0.5 ? "y" : null;
+      lbDragged = !!axis;
+      track.reset(); track.add(e);
+      if (axis) stage.setPointerCapture(id);
     });
+    stage.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== id) return;
+      track.add(e);
+      if (!axis) {
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.hypot(dx, dy) < 10) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        lbDragged = true;
+        sx = e.clientX; sy = e.clientY; // start tracking from here, no jump
+        stage.setPointerCapture(id);
+      }
+      if (axis === "x") {
+        const x = bx + e.clientX - sx;
+        lbX = lbItems.length > 1 ? x : Math.sign(x) * rubberband(Math.abs(x), stage.clientWidth);
+      } else {
+        const y = by + e.clientY - sy;
+        lbY = y < 0 ? -rubberband(-y, stage.clientHeight) : y;
+      }
+      paintLb();
+    });
+    const end = (e) => {
+      if (e.pointerId !== id) return;
+      id = null;
+      const a = axis;
+      axis = null;
+      if (!a) return;
+      const v = track.velocity(e.timeStamp);
+      const cancel = e.type === "pointercancel";
+      if (a === "x") {
+        const rest = lbX + project(v.x);
+        if (!cancel && lbItems.length > 1 && Math.abs(rest) > pageW() * 0.3) return page(rest < 0 ? 1 : -1, v.x);
+        lbAnimX = spring(lbX, 0, v.x, { damping: 1, response: 0.35 }, (x) => { lbX = x; paintLb(); });
+      } else {
+        if (!cancel && lbY + project(v.y) > 180) return closeLightbox(v.y);
+        lbAnimY = spring(lbY, 0, v.y, { damping: 1, response: 0.35 }, (y) => { lbY = y; paintLb(); });
+      }
+    };
+    stage.addEventListener("pointerup", end);
+    stage.addEventListener("pointercancel", end);
   })();
 
   /* -------------------------------------------------------------- Boot */
@@ -415,7 +598,10 @@
     // Keep the globe centred in the free area left of (or above) the panel
     map.setPadding(padding());
     let rz;
-    window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => recentre(300), 150); });
+    window.addEventListener("resize", () => {
+      if (panel.style.height) settleSheet();
+      clearTimeout(rz); rz = setTimeout(() => recentre(300), 150);
+    });
     layer = new RT.RouteLayer(map, { onStop: (id) => go("#/ort/" + id) });
 
     let trip;
