@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "rev": 5,
+  "rev": 6,
   "title": "Gapyear",
   "subtitle": "",
   "start": "",
-  "current": "s-mv44qfre1udk",
+  "current": null,
   "here": null,
   "stops": [
     {
@@ -249,5 +249,5 @@
     }
   ],
   "posts": [],
-  "updated": "2026-10-19T22:13:30.839Z"
+  "updated": "2026-10-19T22:14:30.591Z"
 }
