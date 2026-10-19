@@ -183,6 +183,7 @@
       : { top: 70, left: 50, bottom: 50, right: panel.offsetWidth + 60 };
 
   /* ------------------------------------------------------------ Render */
+  const pad = (n) => String(n).padStart(2, "0");
   const stopName = (s) => (s ? esc(s.name) : "");
 
   const card = (p) => {
@@ -191,7 +192,7 @@
     return `<button class="card" type="button" data-go="#/post/${esc(p.id)}">
       <span class="card__img ${cover ? "" : "card__img--none"}">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : RT.ICON.text}${n > 1 ? `<span class="card__n">${n}</span>` : ""}</span>
       <span class="card__body">
-        <span class="card__meta">${isNew(p) ? '<span class="badge">Neu</span>' : ""}${esc(RT.fmtDate(p.date))}${p.stopObj ? " · " + stopName(p.stopObj) : ""}</span>
+        <span class="card__meta">${isNew(p) ? '<span class="badge">Neu</span>' : ""}<span class="card__fr">Fr. ${pad(model.posts.indexOf(p) + 1)}</span> — ${esc(RT.fmtDate(p.date))}${p.stopObj ? " · " + stopName(p.stopObj) : ""}</span>
         <span class="card__title">${esc(p.title || "Ohne Titel")}</span>
         <span class="card__ex">${esc(RT.excerpt(p.text))}</span>
       </span>
@@ -230,7 +231,9 @@
     const posts = model.posts.slice();
     if (newestFirst) posts.reverse();
     if (!posts.length) {
-      return `<div class="view"><div class="empty"><p class="empty__t">Noch keine Beiträge.</p><p>Sobald es losgeht, erscheinen hier Geschichten, Fotos und Videos von unterwegs.</p></div></div>`;
+      // Before departure the counter reads "bis Start": say how long the roll still waits
+      const wait = !model.current && model.stats.days != null && model.stats.daysLabel === "bis Start" ? model.stats.days : null;
+      return `<div class="view"><div class="empty"><p class="empty__t">Film eingelegt, <em>noch nichts belichtet.</em></p><p>Sobald es losgeht, erscheinen hier Geschichten, Fotos und Videos von unterwegs.</p>${wait != null ? `<span class="empty__count">Noch ${esc(wait)} ${wait === 1 ? "Tag" : "Tage"} bis zur Abreise</span>` : ""}</div></div>`;
     }
     let month = "";
     const html = posts
@@ -250,11 +253,11 @@
     }
     const rows = model.stops
       .map((s) => {
-        const sub = [s.country, RT.fmtRange(s.from, s.to)].filter(Boolean).join(" · ");
+        const sub = [s.status === "now" ? "Jetzt hier" : s.country, RT.fmtRange(s.from, s.to)].filter(Boolean).join(" · ");
         const mode = s.idx > 0 && RT.MODES[s.by] ? RT.MODES[s.by].icon : "";
         return `<li><button class="srow srow--${s.status}" type="button" data-go="#/ort/${esc(s.id)}">
           <span class="srow__dot"></span>
-          <span><span class="srow__name">${esc(s.name)}</span><span class="srow__sub">${esc(sub)}</span></span>
+          <span><span class="srow__name">${esc(s.name)}</span><span class="srow__sub"><span class="srow__no">${pad(s.idx + 1)}</span>${esc(sub)}</span></span>
           <span class="srow__side">${s.posts.length ? `${s.posts.length} ✎ ` : ""}${mode}</span>
         </button></li>`;
       })
@@ -273,7 +276,7 @@
     const posts = model.posts.filter((p) => p.stop === s.id).reverse();
     return `<div class="view">
       <button class="back" type="button" data-go="#/orte">Alle Orte</button>
-      <p class="eyebrow">Station ${String(i + 1).padStart(2, "0")} / ${String(model.stops.length).padStart(2, "0")}${s.country ? " · " + esc(s.country) : ""}</p>
+      <p class="eyebrow">Station ${pad(i + 1)} / ${pad(model.stops.length)}${s.country ? " · " + esc(s.country) : ""}</p>
       <h2 class="detail__title">${esc(s.name)}</h2>
       <div class="detail__meta">
         ${statusPill(s)}
@@ -282,7 +285,7 @@
       </div>
       ${s.note ? `<div class="note prose">${RT.prose(s.note)}</div>` : ""}
       <p class="eyebrow month">Beiträge von hier</p>
-      ${posts.length ? posts.map(card).join("") : `<p class="empty" style="padding:14px 8px;text-align:left">Noch keine Beiträge von hier.</p>`}
+      ${posts.length ? posts.map(card).join("") : `<p class="empty">Von hier noch nichts belichtet.</p>`}
       <div class="pager">
         ${prev ? `<button type="button" data-go="#/ort/${esc(prev.id)}"><span class="eyebrow">← Vorher</span><span>${esc(prev.name)}</span></button>` : "<span></span>"}
         ${next ? `<button type="button" data-go="#/ort/${esc(next.id)}"><span class="eyebrow">Danach →</span><span>${esc(next.name)}</span></button>` : "<span></span>"}
@@ -608,7 +611,7 @@
     try {
       trip = await load();
     } catch (e) {
-      body.innerHTML = `<div class="view"><div class="empty"><p class="empty__t">Hoppla.</p><p>Die Route konnte nicht geladen werden. Bitte später nochmal versuchen.</p></div></div>`;
+      body.innerHTML = `<div class="view"><div class="empty"><p class="empty__t">Lichteinfall.</p><p>Die Route konnte nicht geladen werden. Bitte später nochmal versuchen.</p></div></div>`;
       RT.spin(map);
       return;
     }

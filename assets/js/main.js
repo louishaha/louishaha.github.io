@@ -263,7 +263,6 @@
 
   /* Clock */
   const clockEl = $("[data-clock]");
-  const locEl = $("[data-location]");
   const fmt = (() => {
     try { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: P.timezone }); }
     catch (e) { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
@@ -271,7 +270,6 @@
   const tick = () => {
     const t = fmt.format(new Date());
     clockEl.textContent = `${P.location || "Local"} ${t}`;
-    locEl.textContent = `${P.location || "Local time"}, ${t.slice(0, 5)}`;
   };
   tick();
   setInterval(tick, 1000);
@@ -351,6 +349,13 @@
     queueHero();
   });
   heroBg.addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
+
+  // The nav inverts against the page (difference blend), which turns to
+  // mid grey on mid grey over a photograph. Over the hero it stays paper.
+  const nav = $(".nav");
+  new IntersectionObserver(([en]) => nav.classList.toggle("is-on-photo", en.isIntersecting), {
+    rootMargin: "0px 0px -94% 0px",
+  }).observe(hero);
 
   // scrolling away: the photograph lags behind and dims
   if (!reduceMotion) {

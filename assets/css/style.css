@@ -130,6 +130,7 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   letter-spacing: 0.06em;
   font-size: 11px;
 }
+.nav.is-on-photo { mix-blend-mode: normal; color: #f1ece2; }
 .nav__links { display: flex; gap: clamp(14px, 3vw, 44px); }
 .nav__links a, .nav__name { position: relative; }
 .nav sup { font-size: 0.72em; margin-left: 2px; opacity: 0.6; }
@@ -204,7 +205,7 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 .hero__shade {
   position: absolute; inset: 0; z-index: 3;
   background:
-    linear-gradient(180deg, rgba(8, 7, 6, 0.55) 0%, rgba(8, 7, 6, 0) 22%),
+    linear-gradient(180deg, rgba(8, 7, 6, 0.62) 0%, rgba(8, 7, 6, 0.2) 12%, rgba(8, 7, 6, 0) 24%),
     linear-gradient(0deg, rgba(8, 7, 6, 0.7) 0%, rgba(8, 7, 6, 0.15) 45%, rgba(8, 7, 6, 0.05) 70%),
     rgba(8, 7, 6, var(--dim, 0.12));
 }
