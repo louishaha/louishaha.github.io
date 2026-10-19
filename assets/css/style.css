@@ -161,8 +161,8 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 }
 
 /* Hero -------------------------------------------------------------------
-   A full-bleed photograph behind the name. Each new one opens like a
-   shutter and drifts slowly while it is up; scrolling pulls it away.    */
+   A full-bleed photograph behind the name. Each new one comes into
+   focus and drifts slowly while it is up; scrolling pulls it away.    */
 .hero {
   position: relative;
   isolation: isolate;
@@ -187,14 +187,16 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 .hero__bg img.is-back { opacity: 1; z-index: 1; }
 .hero__bg img.is-front {
   opacity: 1; z-index: 2;
-  animation: shutter 1.5s var(--ease-io) both, drift 9s linear both;
+  animation: focus-pull 1.4s var(--ease) both, drift 6s linear both;
 }
-@keyframes shutter {
-  from { clip-path: inset(0 50% 0 50%); }
-  to { clip-path: inset(0 0 0 0); }
+/* like turning the focus ring: the new frame comes in soft and snaps sharp */
+@keyframes focus-pull {
+  from { opacity: 0; filter: blur(22px) brightness(1.25); }
+  45% { opacity: 1; }
+  to { opacity: 1; filter: blur(0) brightness(1); }
 }
 @keyframes drift {
-  from { scale: 1.14; }
+  from { scale: 1.1; }
   to { scale: 1.02; }
 }
 @media (prefers-reduced-motion: reduce) { .hero__bg img.is-front { animation: none; } }

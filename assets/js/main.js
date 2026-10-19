@@ -292,8 +292,8 @@
   });
 
   /* ------------------------------------------------------------------------
-     Hero — full-bleed photographs behind the name. Each one opens like a
-     shutter; the ticks show progress and jump to a frame when clicked.
+     Hero — full-bleed photographs behind the name. Each one comes into
+     focus; the ticks show progress and jump to a frame when clicked.
      ------------------------------------------------------------------------ */
   const heroSet = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
   const hero = $("[data-hero]");
@@ -301,7 +301,7 @@
   const heroImgs = [$("[data-hero-a]"), $("[data-hero-b]")];
   const heroCap = $("[data-hero-caption]");
   const ticks = $("[data-hero-ticks]");
-  const HERO_MS = 6500;
+  const HERO_MS = 4000;
   let heroIdx = 0;
   let heroFront = 0;
   let heroTimer;
