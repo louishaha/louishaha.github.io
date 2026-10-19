@@ -160,15 +160,51 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   .nav__clock { display: none; }
 }
 
-/* Hero ------------------------------------------------------------------- */
+/* Hero -------------------------------------------------------------------
+   Darkroom: the page is dark and the photograph only shows where the
+   "safelight" falls. JS moves the light (--x, --y, --r) with the pointer,
+   or lets it drift on its own. The name sits on top as a negative.       */
 .hero {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding: 68px var(--gutter) var(--gutter);
   gap: 24px;
+  overflow: hidden;
 }
+.hero > :not(.hero__light) { position: relative; z-index: 1; }
+
+.hero__light {
+  --x: 50%; --y: 50%; --r: 0px;
+  position: absolute; inset: 0; z-index: 0;
+  cursor: pointer;
+  -webkit-mask-image: radial-gradient(circle var(--r) at var(--x) var(--y), #000 0%, rgba(0, 0, 0, 0.92) 30%, rgba(0, 0, 0, 0.45) 62%, transparent 100%);
+          mask-image: radial-gradient(circle var(--r) at var(--x) var(--y), #000 0%, rgba(0, 0, 0, 0.92) 30%, rgba(0, 0, 0, 0.45) 62%, transparent 100%);
+}
+.hero__light img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+}
+/* a warm safelight fringe around the edge of the light */
+.hero__light::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: radial-gradient(circle var(--r) at var(--x) var(--y), transparent 38%, rgba(255, 59, 31, 0.32) 78%, transparent 100%);
+  mix-blend-mode: screen;
+}
+.hero__light img.is-front { z-index: 2; opacity: 1; animation: develop 2.4s var(--ease) both; }
+.hero__light img.is-back { z-index: 1; opacity: 1; }
+/* new prints come up out of the developer: dark, warm, low contrast → full */
+@keyframes develop {
+  0% { opacity: 0; filter: brightness(0.15) sepia(1) saturate(4) hue-rotate(-28deg) contrast(0.7); }
+  35% { opacity: 1; }
+  100% { opacity: 1; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .hero__light img.is-front { animation: none; } }
+
 .hero__meta,
 .hero__foot {
   display: grid;
@@ -178,7 +214,9 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   letter-spacing: 0.06em;
   color: var(--muted);
   font-size: 11px;
+  pointer-events: none;
 }
+.hero__meta a, .hero__foot a { pointer-events: auto; }
 .hero__meta { border-top: 1px solid var(--line); padding-top: 10px; }
 .hero__meta-r { text-align: right; }
 
@@ -192,46 +230,32 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   letter-spacing: -0.035em;
   display: flex;
   flex-direction: column;
+  pointer-events: none;
 }
-.hero__line { display: flex; align-items: center; gap: 0.06em; }
+.hero__line { display: flex; }
 .hero__line--2 { justify-content: flex-end; margin-top: 0.02em; }
 .hero__word { display: inline-block; }
 .hero__name em { padding-right: 0.04em; }
 
-.hero__frame {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 1.4em;
-  height: 0.66em;
-  margin-left: 0.12em;
-  margin-right: 0.04em;
-  overflow: hidden;
-  background: var(--tile);
-  align-self: center;
-  translate: 0 0.04em;
-}
-.hero__frame img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover;
-}
-.hero__frame img.is-front { z-index: 2; animation: shutter 1.1s var(--ease-io) both; }
-@keyframes shutter {
-  from { clip-path: inset(0 0 100% 0); transform: scale(1.12); }
-  to { clip-path: inset(0 0 0 0); transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) { .hero__frame img.is-front { animation: none; } }
+/* In the darkroom the type prints as a negative of whatever is under it */
+:root:not([data-theme="light"]) .hero > :not(.hero__light) { mix-blend-mode: difference; }
 
 .hero__foot { align-items: end; }
 .hero__scroll { color: var(--fg); }
-.hero__caption { grid-column: 2 / 5; text-align: right; font-variant-numeric: tabular-nums; }
+.hero__hint { display: inline-flex; align-items: center; gap: 10px; transition: opacity 0.8s var(--ease); }
+.hero__hint.is-gone { opacity: 0; }
+.hero__hint-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 14px 3px rgba(255, 59, 31, 0.5);
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+.hero__caption { grid-column: 3 / 5; text-align: right; font-variant-numeric: tabular-nums; }
 .hero__caption b { color: var(--fg); font-weight: 400; }
 
 /* Intro reveal for hero words */
-.js .hero__word, .js .hero__frame { transition: transform 1.3s var(--ease), clip-path 1.3s var(--ease); }
+.js .hero__word { transition: transform 1.3s var(--ease), clip-path 1.3s var(--ease); }
 .js body:not(.is-ready) .hero__word { transform: translateY(0.35em); clip-path: inset(0 0 100% 0); }
-.js body:not(.is-ready) .hero__frame { clip-path: inset(50% 50% 50% 50%); }
 .hero__line--2 .hero__word { transition-delay: 0.08s; }
-.hero__frame { transition-delay: 0.18s; }
 
 @media (max-width: 760px) {
   .hero__meta { grid-template-columns: 1fr 1fr; row-gap: 4px; }
@@ -239,10 +263,8 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   .hero__meta > :nth-child(2) { text-align: right; }
   .hero__meta-r { grid-column: 1 / 3; text-align: left; }
   .hero__name { font-size: 27vw; }
-  .hero__line--1 { flex-direction: column; align-items: flex-start; }
-  .hero__frame { height: auto; width: 100%; margin: 0.12em 0 0.08em; translate: none; aspect-ratio: 4 / 3; }
-  .hero__line--1 .hero__frame { order: 2; }
-  .hero__foot { grid-template-columns: 1fr; }
+  .hero__foot { grid-template-columns: 1fr; row-gap: 6px; }
+  .hero__hint { display: none; }
   .hero__caption { grid-column: auto; text-align: left; }
 }
 

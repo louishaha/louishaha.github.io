@@ -292,11 +292,16 @@
   });
 
   /* ------------------------------------------------------------------------
-     Hero — cycling frame between first and last name
+     Hero — darkroom. The photograph only shows inside a soft pool of light
+     that follows the pointer (or drifts by itself when nobody moves it).
+     Every few seconds a new print comes up out of the developer.
      ------------------------------------------------------------------------ */
   const heroSet = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
+  const hero = $("[data-hero]");
+  const heroLight = $("[data-hero-light]");
   const heroImgs = [$("[data-hero-a]"), $("[data-hero-b]")];
   const heroCap = $("[data-hero-caption]");
+  const heroHint = $("[data-hero-hint]");
   let heroIdx = 0;
   let heroFront = 0;
 
@@ -304,32 +309,83 @@
     const p = heroSet[i];
     if (!p) return;
     const img = heroImgs[heroFront ^ 1];
-    p.thumb$().then((src) => {
+    p.src$().then((src) => {
       const swap = () => {
         heroImgs[heroFront].classList.remove("is-front");
-        heroImgs[heroFront].style.zIndex = 1;
-        img.style.zIndex = "";
-        img.classList.remove("is-front");
+        heroImgs[heroFront].classList.add("is-back");
+        img.classList.remove("is-front", "is-back");
         void img.offsetWidth;
         img.classList.add("is-front");
-        img.alt = p.where ? `${p.title}, ${p.where}` : p.title;
         heroFront ^= 1;
         heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
+        // the print underneath is no longer needed once the new one is up
+        setTimeout(() => { if (!heroImgs[heroFront ^ 1].classList.contains("is-front")) heroImgs[heroFront ^ 1].classList.remove("is-back"); }, 2400);
       };
-      if (img.src === src && img.complete) swap();
+      if (img.src.endsWith(src) && img.complete) swap();
       else { img.onload = swap; img.src = src; }
     });
   }
   showHero(0);
-  heroSet.forEach((p) => p.thumb$()); // warm cache
-  let heroTimer;
-  const startHero = () => {
-    if (reduceMotion || heroSet.length < 2) return;
-    clearInterval(heroTimer);
-    heroTimer = setInterval(() => { heroIdx = (heroIdx + 1) % heroSet.length; showHero(heroIdx); }, 2600);
+  if (heroSet[1]) heroSet[1].src$(); // warm cache for the next print
+  if (!reduceMotion && heroSet.length > 1) {
+    setInterval(() => {
+      if (document.hidden || !heroOn) return;
+      heroIdx = (heroIdx + 1) % heroSet.length;
+      showHero(heroIdx);
+      heroSet[(heroIdx + 1) % heroSet.length].src$();
+    }, 5200);
+  }
+  heroLight.addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
+
+  // the light
+  let heroOn = true;
+  let hw = 0, hh = 0, hTop = 0;
+  const measureHero = () => { const r = hero.getBoundingClientRect(); hw = r.width; hh = r.height; hTop = r.top + scrollY; };
+  measureHero();
+  addEventListener("resize", measureHero, { passive: true });
+  let lightRunning = false;
+  const startLight = () => { if (lightRunning) return; lightRunning = true; lastT = performance.now(); requestAnimationFrame(lightLoop); };
+  new IntersectionObserver(([e]) => { heroOn = e.isIntersecting; if (heroOn) startLight(); }).observe(hero);
+
+  let lx = hw / 2, ly = hh / 2, tx = lx, ty = ly, lr = 0;
+  let lastMove = -1e9, moved = false, lastT = performance.now();
+  const follow = (cx, cy) => {
+    tx = cx; ty = cy + scrollY - hTop; lastMove = performance.now();
+    if (!moved) { moved = true; heroHint.classList.add("is-gone"); }
   };
-  startHero();
-  $("[data-hero-frame]").addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
+  hero.addEventListener("pointermove", (e) => follow(e.clientX, e.clientY), { passive: true });
+  hero.addEventListener("touchmove", (e) => follow(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+
+  const ease = (rate, dt) => 1 - Math.pow(1 - rate, dt / 16.67);
+  function lightLoop(now) {
+    if (!heroOn) { lightRunning = false; return; }
+    const dt = Math.min(64, now - lastT);
+    lastT = now;
+    const ready = document.body.classList.contains("is-ready");
+    const small = hw < 760;
+    let base = Math.max(hw, hh) * (small ? 0.62 : 0.36);
+    if (reduceMotion) {
+      tx = hw * 0.5; ty = hh * 0.5; base = Math.max(hw, hh) * 0.75;
+    } else if (now - lastMove > 2600) {
+      // nobody is holding the light: let it drift slowly through the frame
+      const t = now / 1000;
+      tx = hw * (0.5 + 0.3 * Math.sin(t * 0.23) + 0.06 * Math.sin(t * 0.71));
+      ty = hh * (0.48 + 0.2 * Math.sin(t * 0.31 + 1.3));
+    }
+    const px = lx, py = ly;
+    const follow = now - lastMove < 2600 ? 0.12 : 0.03;
+    lx += (tx - lx) * ease(follow, dt);
+    ly += (ty - ly) * ease(follow, dt);
+    // a fast swing narrows the beam a little, it opens again when it rests
+    const speed = Math.hypot(lx - px, ly - py) * (16.67 / dt);
+    const want = ready ? base * (1 - Math.min(speed / 90, 0.3)) : 0;
+    lr += (want - lr) * ease(ready && lr < base * 0.5 ? 0.035 : 0.08, dt);
+    heroLight.style.setProperty("--x", `${lx.toFixed(1)}px`);
+    heroLight.style.setProperty("--y", `${ly.toFixed(1)}px`);
+    heroLight.style.setProperty("--r", `${Math.max(1, lr).toFixed(1)}px`);
+    requestAnimationFrame(lightLoop);
+  }
+  startLight();
 
   /* ------------------------------------------------------------------------
      Photographs — grid
