@@ -35,64 +35,114 @@
     RT.store.set(READ, JSON.stringify([...read].slice(-500)));
   };
 
-  /* ------------------------------------------------------- Bottom sheet */
+  /* ------------------------------------------------------- Bottom sheet
+     Mobile only. The panel is a fixed-size layer moved with a transform:
+       - follows the finger 1:1 (from where it was grabbed), rubber-bands at the ends
+       - on release the flick is projected to a resting detent and a spring
+         carries on with the finger's own velocity
+       - can be grabbed again at any moment, also mid-flight                     */
   const SHEET = ["peek", "half", "full"];
+  const OVER = 48; // must match --over
   let sheet = "peek";
-  const setSheet = (s) => {
-    sheet = s;
-    panel.classList.toggle("is-half", s === "half");
-    panel.classList.toggle("is-full", s === "full");
-    if (map && s !== "full") recentre(450);
+  let sheetY = 0;
+  let sheetAnim = null;
+
+  const panelH = () => panel.offsetHeight;
+  const safeBottom = () => parseFloat(getComputedStyle(panel).paddingBottom) || 0;
+  const peekVisible = () => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 196) + safeBottom();
+  const visibleFor = (st) => (st === "full" ? panelH() - OVER : st === "half" ? window.innerHeight * 0.52 : peekVisible());
+  const yFor = (st) => panelH() - visibleFor(st);
+  const applyY = (y) => {
+    sheetY = y;
+    panel.style.transform = `translate3d(0, ${y}px, 0)`;
+  };
+  const rubber = (y) => {
+    const lo = yFor("full"), hi = yFor("peek");
+    if (y < lo) return lo - Math.min(OVER - 2, RT.rubberband(lo - y, 300));
+    if (y > hi) return hi + RT.rubberband(y - hi, 300);
+    return y;
+  };
+
+  // Moves the sheet to a detent; velocity (px/s, + = down) is handed to the spring
+  const setSheet = (st, velocity = 0) => {
+    sheet = st;
+    panel.dataset.sheet = st;
+    if (map && st !== "full") recentre(450);
+    if (!mobile.matches) return;
+    sheetAnim && sheetAnim.stop();
+    const to = yFor(st);
+    if (reduceMotion) { applyY(to); return; }
+    sheetAnim = RT.spring({
+      from: sheetY, to, velocity,
+      response: 0.42,
+      damping: Math.abs(velocity) > 400 ? 0.82 : 1, // bounce only if a flick carried momentum
+      onUpdate: applyY,
+    });
   };
   const ensureSheet = (min) => {
     if (mobile.matches && SHEET.indexOf(sheet) < SHEET.indexOf(min)) setSheet(min);
   };
+  const layoutSheet = () => {
+    if (!mobile.matches) { sheetAnim && sheetAnim.stop(); panel.style.transform = ""; return; }
+    sheetAnim && sheetAnim.stop();
+    applyY(yFor(sheet));
+  };
+  panel.dataset.sheet = sheet;
+  layoutSheet();
+  mobile.addEventListener("change", layoutSheet);
+  window.addEventListener("resize", () => { if (!(sheetAnim && sheetAnim.running) && !panel.classList.contains("is-dragging")) layoutSheet(); });
 
   (() => {
-    const grab = [$("[data-handle]"), $("[data-head]")];
-    let startY = 0, startH = 0, dragging = false, moved = false, lastY = 0, lastT = 0, v = 0;
-    const heightFor = (st) => {
-      const peek = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--peek")) || 186) + (parseFloat(getComputedStyle(panel).paddingBottom) || 0);
-      return st === "full" ? window.innerHeight * 0.88 : st === "half" ? window.innerHeight * 0.52 : peek;
+    let drag = null;
+    const velocity = (hist, now) => {
+      const last = hist[hist.length - 1];
+      if (!last || now - last.t > 80) return 0; // finger rested before lifting
+      const first = hist.find((h) => last.t - h.t <= 100) || hist[0];
+      return last.t === first.t ? 0 : ((last.y - first.y) / (last.t - first.t)) * 1000;
     };
-    const down = (e) => {
-      if (!mobile.matches) return;
-      if (sheet === "full" && e.currentTarget.hasAttribute("data-head")) return;
-      dragging = true; moved = false;
-      startY = lastY = e.clientY;
-      startH = panel.offsetHeight;
-      lastT = performance.now(); v = 0;
-      e.currentTarget.setPointerCapture?.(e.pointerId);
-    };
-    const move = (e) => {
-      if (!dragging) return;
-      const dy = e.clientY - startY;
-      if (!moved && Math.abs(dy) < 5) return;
-      if (!moved) { moved = true; panel.classList.add("is-dragging"); }
-      const now = performance.now();
-      v = (e.clientY - lastY) / Math.max(1, now - lastT);
-      lastY = e.clientY; lastT = now;
-      panel.style.height = Math.max(heightFor("peek"), Math.min(heightFor("full"), startH - dy)) + "px";
-    };
-    const up = (e) => {
-      if (!dragging) return;
-      dragging = false;
+
+    panel.addEventListener("pointerdown", (e) => {
+      if (!mobile.matches || e.button) return;
+      if (sheet === "full" && body.contains(e.target)) return; // content scrolls here
+      const interrupted = !!(sheetAnim && sheetAnim.running);
+      sheetAnim && sheetAnim.stop(); // grab it wherever it is right now
+      drag = {
+        id: e.pointerId, x: e.clientX, y: e.clientY, y0: sheetY, moved: false, interrupted,
+        tap: !!e.target.closest("[data-handle],[data-head]"),
+        hist: [{ t: e.timeStamp, y: e.clientY }],
+      };
+    });
+    panel.addEventListener("pointermove", (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved) {
+        if (Math.hypot(dx, dy) < 8) return; // hysteresis before committing to a direction
+        if (Math.abs(dx) > Math.abs(dy)) { if (drag.interrupted) setSheet(sheet); drag = null; return; }
+        drag.moved = true;
+        panel.setPointerCapture(e.pointerId);
+        panel.classList.add("is-dragging");
+      }
+      drag.hist.push({ t: e.timeStamp, y: e.clientY });
+      if (drag.hist.length > 8) drag.hist.shift();
+      applyY(rubber(drag.y0 + dy));
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag;
+      drag = null;
       panel.classList.remove("is-dragging");
-      panel.style.height = "";
-      if (!moved) {
-        setSheet(sheet === "peek" ? "half" : sheet === "half" ? "full" : "half");
+      if (!d.moved) {
+        if (d.interrupted) setSheet(sheet);
+        else if (d.tap && e.type === "pointerup") setSheet(sheet === "peek" ? "half" : sheet === "half" ? "full" : "half");
         return;
       }
-      const h = startH - (e.clientY - startY) - v * 180;
-      const best = SHEET.map((st) => [st, Math.abs(heightFor(st) - h)]).sort((x, y) => x[1] - y[1])[0][0];
-      setSheet(best);
+      const v = e.type === "pointercancel" ? 0 : velocity(d.hist, e.timeStamp);
+      const projected = sheetY + RT.project(v);
+      const best = SHEET.map((st) => [st, Math.abs(yFor(st) - projected)]).sort((p, q) => p[1] - q[1])[0][0];
+      setSheet(best, v);
     };
-    grab.forEach((el) => {
-      el.addEventListener("pointerdown", down);
-      el.addEventListener("pointermove", move);
-      el.addEventListener("pointerup", up);
-      el.addEventListener("pointercancel", up);
-    });
+    panel.addEventListener("pointerup", end);
+    panel.addEventListener("pointercancel", end);
   })();
 
   const recentre = (ms) => {
@@ -102,7 +152,7 @@
 
   const padding = () =>
     mobile.matches
-      ? { top: 70, left: 30, right: 30, bottom: sheet === "peek" ? 200 : window.innerHeight * 0.52 + 30 }
+      ? { top: 70, left: 30, right: 30, bottom: (sheet === "peek" ? peekVisible() : window.innerHeight * 0.52) + 24 }
       : { top: 70, left: 50, bottom: 50, right: panel.offsetWidth + 60 };
 
   /* ------------------------------------------------------------ Render */
@@ -112,7 +162,7 @@
     const cover = RT.cover(p);
     const n = p.media.length;
     return `<button class="card" type="button" data-go="#/post/${esc(p.id)}">
-      <span class="card__img ${cover ? "" : "card__img--none"}">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : RT.ICON.text}${n > 1 ? `<span class="card__n">${n}</span>` : ""}</span>
+      <span class="card__img ${cover ? "" : "card__img--none"}">${cover ? `<img src="${esc(cover)}" alt="" loading="lazy">` : RT.ICON.text}${n > 1 ? `<span class="card__n">${RT.ICON.stack}${n}</span>` : ""}</span>
       <span class="card__body">
         <span class="card__meta">${isNew(p) ? '<span class="badge">Neu</span>' : ""}${esc(RT.fmtDate(p.date))}${p.stopObj ? " · " + stopName(p.stopObj) : ""}</span>
         <span class="card__title">${esc(p.title || "Ohne Titel")}</span>
@@ -147,6 +197,7 @@
     const where = (model.here && model.here.label) || (model.current && model.current.name);
     live.hidden = !where;
     if (where) $("[data-live-label]").textContent = `Jetzt: ${where}`;
+    placeThumb();
   };
 
   const viewJournal = () => {
@@ -159,7 +210,7 @@
     const html = posts
       .map((p) => {
         const m = RT.fmtMonth(p.date);
-        const head = m !== month ? `<p class="eyebrow month">${esc(m)}</p>` : "";
+        const head = m !== month ? `<p class="month">${esc(m)}</p>` : "";
         month = m;
         return head + card(p);
       })
@@ -178,7 +229,7 @@
         return `<li><button class="srow srow--${s.status}" type="button" data-go="#/ort/${esc(s.id)}">
           <span class="srow__dot"></span>
           <span><span class="srow__name">${esc(s.name)}</span><span class="srow__sub">${esc(sub)}</span></span>
-          <span class="srow__side">${s.posts.length ? `${s.posts.length} ✎ ` : ""}${mode}</span>
+          <span class="srow__side">${s.posts.length ? `${s.posts.length} ${s.posts.length === 1 ? "Beitrag" : "Beiträge"}` : ""}${mode}${RT.ICON.next}</span>
         </button></li>`;
       })
       .join("");
@@ -195,7 +246,7 @@
     const prev = model.stops[i - 1], next = model.stops[i + 1];
     const posts = model.posts.filter((p) => p.stop === s.id).reverse();
     return `<div class="view">
-      <button class="back" type="button" data-go="#/orte">← Alle Orte</button>
+      <button class="back" type="button" data-go="#/orte">${RT.ICON.chev}Alle Orte</button>
       <p class="eyebrow">Station ${String(i + 1).padStart(2, "0")} / ${String(model.stops.length).padStart(2, "0")}${s.country ? " · " + esc(s.country) : ""}</p>
       <h2 class="detail__title">${esc(s.name)}</h2>
       <div class="detail__meta">
@@ -204,7 +255,7 @@
         ${i > 0 && RT.MODES[s.by] ? `<span class="pill">${RT.MODES[s.by].icon}${esc(RT.MODES[s.by].label)}</span>` : ""}
       </div>
       ${s.note ? `<div class="note prose">${RT.prose(s.note)}</div>` : ""}
-      <p class="eyebrow month">Beiträge von hier</p>
+      <p class="month">Beiträge von hier</p>
       ${posts.length ? posts.map(card).join("") : `<p class="empty" style="padding:14px 8px;text-align:left">Noch keine Beiträge von hier.</p>`}
       <div class="pager">
         ${prev ? `<button type="button" data-go="#/ort/${esc(prev.id)}"><span class="eyebrow">← Vorher</span><span>${esc(prev.name)}</span></button>` : "<span></span>"}
@@ -228,7 +279,7 @@
     const older = list[i - 1], newer = list[i + 1];
     const backLabel = backTo.startsWith("#/ort/") ? (model.stops.find((s) => "#/ort/" + s.id === backTo)?.name || "Zurück") : backTo === "#/orte" ? "Alle Orte" : "Journal";
     return `<div class="view">
-      <button class="back" type="button" data-go="${esc(backTo)}">← ${esc(backLabel)}</button>
+      <button class="back" type="button" data-go="${esc(backTo)}">${RT.ICON.chev}${esc(backLabel)}</button>
       <p class="eyebrow">${esc(RT.fmtDate(p.date))}${p.stopObj ? ` · <a href="#/ort/${esc(p.stopObj.id)}">${stopName(p.stopObj)}</a>${p.stopObj.country && p.stopObj.country !== p.stopObj.name ? ", " + esc(p.stopObj.country) : ""}` : ""}</p>
       <h2 class="detail__title">${esc(p.title || "Ohne Titel")}</h2>
       ${p.media.length ? `<div class="gallery">${p.media.map(galleryItem).join("")}</div>` : ""}
@@ -246,10 +297,19 @@
 
   /* ------------------------------------------------------------ Router */
   let currentPost = null;
-  const setTab = (name) => {
+  const thumb = $("[data-seg-thumb]");
+  const placeThumb = () => {
+    const on = $("[data-seg] .tab.is-active");
+    if (!on) return;
+    thumb.style.width = on.offsetWidth + "px";
+    thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+    if (!thumb.classList.contains("is-ready")) requestAnimationFrame(() => thumb.classList.add("is-ready"));
+  };
+  const setTab = (name, list = false) => {
     $$("[data-tab]").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === name));
+    placeThumb();
     const sort = $("[data-sort]");
-    sort.hidden = name !== "journal" || model.posts.length < 2;
+    sort.hidden = !list || model.posts.length < 2;
     sort.textContent = newestFirst ? "Neueste zuerst ↓" : "Älteste zuerst ↑";
   };
 
@@ -287,7 +347,7 @@
     } else {
       backTo = "#/";
       html = viewJournal();
-      setTab("journal");
+      setTab("journal", true);
       layer && layer.setActive(null);
     }
     body.innerHTML = html;
@@ -389,16 +449,79 @@
     else if (e.key === "ArrowLeft" && lbItems.length > 1) lbShow(lbIdx - 1);
     else if (e.key === "ArrowRight" && lbItems.length > 1) lbShow(lbIdx + 1);
   });
+  /* Lightbox gestures: the photo follows the finger. Sideways flicks page
+     through (projected, with the finger's velocity), a vertical pull dismisses
+     it while the background fades; anything undecided springs back. */
   (() => {
-    let x0 = null, y0 = 0;
     const stage = $("[data-lb-stage]");
-    stage.addEventListener("touchstart", (e) => { if (e.touches.length === 1) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } }, { passive: true });
-    stage.addEventListener("touchend", (e) => {
-      if (x0 == null || lbItems.length < 2) return;
-      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
-      x0 = null;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) lbShow(lbIdx + (dx < 0 ? 1 : -1));
+    let g = null, anim = null, swallow = false;
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+    const paint = (x, y) => {
+      const p = Math.min(1, Math.abs(y) / (H() * 0.5));
+      lbMedia.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${1 - p * 0.22})`;
+      lb.style.setProperty("--lb-o", String(1 - p * 0.85));
+    };
+    const reset = () => { lbMedia.style.transform = ""; lb.style.removeProperty("--lb-o"); };
+    const run = (o) => { anim && anim.stop(); anim = RT.spring({ response: 0.38, ...o }); return anim; };
+    const vel = (h, now) => {
+      const l = h[h.length - 1];
+      if (!l || now - l.t > 80) return { x: 0, y: 0 };
+      const f = h.find((q) => l.t - q.t <= 100) || h[0];
+      const dt = l.t - f.t;
+      return dt ? { x: ((l.x - f.x) / dt) * 1000, y: ((l.y - f.y) / dt) * 1000 } : { x: 0, y: 0 };
+    };
+
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.button || !e.target.closest("img")) return;
+      anim && anim.stop();
+      g = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: 0, oy: 0, axis: null, h: [{ t: e.timeStamp, x: e.clientX, y: e.clientY }] };
     });
+    stage.addEventListener("pointermove", (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.axis) {
+        if (Math.hypot(dx, dy) < 10) return;
+        g.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        if (g.axis === "x" && lbItems.length < 2) g.axis = "y";
+        stage.setPointerCapture(e.pointerId);
+      }
+      g.h.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
+      if (g.h.length > 8) g.h.shift();
+      if (g.axis === "x") paint(dx, 0);
+      else paint(0, dy);
+    });
+    const end = (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      const d = g, v = e.type === "pointercancel" ? { x: 0, y: 0 } : vel(g.h, e.timeStamp);
+      g = null;
+      if (!d.axis) return;
+      swallow = true; setTimeout(() => { swallow = false; }, 0);
+      const dx = e.clientX - d.x, dy = e.clientY - d.y;
+      if (d.axis === "x") {
+        const end = dx + RT.project(v.x);
+        if (Math.abs(end) > 110) {
+          const dir = end < 0 ? 1 : -1, off = -dir * W();
+          run({ from: dx, to: off, velocity: v.x, response: 0.28, damping: 1, rest: 2,
+            onUpdate: (x) => paint(x, 0),
+            onDone: () => {
+              lbShow(lbIdx + dir);
+              paint(-off, 0);
+              run({ from: -off, to: 0, velocity: 0, response: 0.4, onUpdate: (x) => paint(x, 0), onDone: reset });
+            } });
+        } else run({ from: dx, to: 0, velocity: v.x, damping: 0.85, onUpdate: (x) => paint(x, 0), onDone: reset });
+      } else {
+        const end = dy + RT.project(v.y);
+        if (Math.abs(end) > 160) {
+          const off = (end < 0 ? -1 : 1) * H() * 0.6;
+          run({ from: dy, to: off, velocity: v.y, response: 0.3, damping: 1, rest: 2,
+            onUpdate: (y) => paint(0, y),
+            onDone: () => { closeLightbox(); reset(); } });
+        } else run({ from: dy, to: 0, velocity: v.y, damping: 0.85, onUpdate: (y) => paint(0, y), onDone: reset });
+      }
+    };
+    stage.addEventListener("pointerup", end);
+    stage.addEventListener("pointercancel", end);
+    lbMedia.addEventListener("click", (e) => { if (swallow) e.stopPropagation(); }, true);
   })();
 
   /* -------------------------------------------------------------- Boot */

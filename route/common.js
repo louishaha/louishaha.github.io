@@ -39,6 +39,36 @@
     toastTimer = setTimeout(() => el.classList.remove("is-on"), ms);
   };
 
+  /* --------------------------------------------------------------- Motion
+     Springs keep velocity, can be grabbed mid-flight and re-targeted.
+     response = seconds to (almost) reach the target, damping 1 = no bounce. */
+  RT.spring = ({ from, to, velocity = 0, response = 0.4, damping = 1, rest = 0.4, onUpdate, onDone }) => {
+    const w = (2 * Math.PI) / response;
+    const k = w * w, c = 2 * damping * w;
+    let x = from, v = velocity, raf = 0, stopped = false, last = performance.now();
+    const step = (t) => {
+      if (stopped) return;
+      const dt = Math.min(0.064, Math.max(0, (t - last) / 1000));
+      last = t;
+      const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
+      for (let i = 0; i < n; i++) { v += (-k * (x - to) - c * v) * h; x += v * h; }
+      if (Math.abs(x - to) < rest && Math.abs(v) < rest * 12) {
+        stopped = true;
+        onUpdate(to);
+        onDone && onDone();
+        return;
+      }
+      onUpdate(x);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return { stop() { stopped = true; cancelAnimationFrame(raf); }, get running() { return !stopped; }, get value() { return x; } };
+  };
+  // Where a flick ends up if it were left to decelerate (px/s -> px)
+  RT.project = (velocity, rate = 0.99) => ((velocity / 1000) * rate) / (1 - rate);
+  // Progressive resistance past an edge
+  RT.rubberband = (over, dim, c = 0.55) => (over * dim * c) / (dim + c * Math.abs(over));
+
   /* ------------------------------------------------------------------ Gate
      A curtain, not a vault: everything here is public on GitHub Pages.    */
   const fnv = (s) => {
@@ -105,6 +135,7 @@
       }, 260);
       return true;
     });
+    gate.addEventListener("click", () => input.focus());
     setTimeout(() => input.focus(), 50);
   };
 
@@ -150,6 +181,10 @@
     play: ic('<path d="M7 4.5v15l13-7.5z"/>', true),
     share: ic('<path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'),
     text: ic('<path d="M5 6h14M5 11h14M5 16h9"/>'),
+    chev: ic('<path d="M14.5 5.5 8 12l6.5 6.5"/>'),
+    next: ic('<path d="M9.5 5.5 16 12l-6.5 6.5"/>'),
+    close: ic('<path d="M6 6l12 12M18 6 6 18"/>'),
+    stack: ic('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M5 15.5V7a2 2 0 0 1 2-2h8.5"/>'),
   };
 
   /* ------------------------------------------------------------ Geometry */
@@ -310,9 +345,9 @@
     version: 8,
     projection: { type: "globe" },
     sky: {
-      "sky-color": "#0d0c0a",
-      "horizon-color": "#2a1410",
-      "fog-color": "#0d0c0a",
+      "sky-color": "#000000",
+      "horizon-color": "#1b3358",
+      "fog-color": "#000000",
       "sky-horizon-blend": 0.6,
       "horizon-fog-blend": 0.5,
       "fog-ground-blend": 0.8,
@@ -334,7 +369,7 @@
       },
     },
     layers: [
-      { id: "bg", type: "background", paint: { "background-color": "#0b0a09" } },
+      { id: "bg", type: "background", paint: { "background-color": "#000000" } },
       {
         id: "sat",
         type: "raster",
@@ -402,17 +437,17 @@
           id: "leg-glow", type: "line", source: "route",
           filter: ["==", ["get", "status"], "done"],
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#ff3b1f", "line-width": 9, "line-blur": 7, "line-opacity": 0.4 },
+          paint: { "line-color": "#ff453a", "line-width": 9, "line-blur": 7, "line-opacity": 0.4 },
         });
         map.addLayer({
           id: "leg-done", type: "line", source: "route",
           filter: ["==", ["get", "status"], "done"],
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#ff3b1f", "line-width": ["case", ["==", ["get", "mode"], "plane"], 1.6, 2.4] },
+          paint: { "line-color": "#ff453a", "line-width": ["case", ["==", ["get", "mode"], "plane"], 1.6, 2.4] },
         });
         this.ready = true;
         if (this.model) this.set(this.model);
-        map.on("zoom", () => this.zoomClass());
+        map.on("zoom", () => { this.zoomClass(); this.placeModes(); });
         map.on("moveend", () => this.placeModes());
       });
     }
