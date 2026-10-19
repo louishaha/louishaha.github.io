@@ -292,44 +292,78 @@
   });
 
   /* ------------------------------------------------------------------------
-     Hero — cycling frame between first and last name
+     Hero — full-bleed photographs behind the name. Each one comes into
+     focus; the ticks show progress and jump to a frame when clicked.
      ------------------------------------------------------------------------ */
   const heroSet = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
+  const hero = $("[data-hero]");
+  const heroBg = $("[data-hero-bg]");
   const heroImgs = [$("[data-hero-a]"), $("[data-hero-b]")];
   const heroCap = $("[data-hero-caption]");
+  const ticks = $("[data-hero-ticks]");
+  const HERO_MS = 4000;
   let heroIdx = 0;
   let heroFront = 0;
+  let heroTimer;
+
+  ticks.innerHTML = heroSet.map((p, i) => `<button type="button" class="hero__tick" data-tick="${i}" aria-label="Show ${esc(p.title)}"></button>`).join("");
+  ticks.style.setProperty("--dur", `${HERO_MS}ms`);
+  const tickEls = $$("[data-tick]", ticks);
 
   function showHero(i) {
     const p = heroSet[i];
     if (!p) return;
+    heroIdx = i;
+    tickEls.forEach((t, j) => {
+      t.classList.toggle("is-done", j < i);
+      t.classList.remove("is-on");
+    });
+    void ticks.offsetWidth;
+    if (!reduceMotion) tickEls[i].classList.add("is-on");
+    heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
     const img = heroImgs[heroFront ^ 1];
-    p.thumb$().then((src) => {
+    p.src$().then((src) => {
+      if (heroIdx !== i) return;
       const swap = () => {
         heroImgs[heroFront].classList.remove("is-front");
-        heroImgs[heroFront].style.zIndex = 1;
-        img.style.zIndex = "";
-        img.classList.remove("is-front");
+        heroImgs[heroFront].classList.add("is-back");
+        img.classList.remove("is-front", "is-back");
         void img.offsetWidth;
         img.classList.add("is-front");
-        img.alt = p.where ? `${p.title}, ${p.where}` : p.title;
         heroFront ^= 1;
-        heroCap.innerHTML = `Fr. ${pad(i + 1)}/${pad(heroSet.length)} — <b>${esc(p.title)}</b>${p.where ? `, ${esc(p.where)}` : ""}`;
       };
-      if (img.src === src && img.complete) swap();
+      if (img.src.endsWith(src) && img.complete) swap();
       else { img.onload = swap; img.src = src; }
     });
+    heroSet[(i + 1) % heroSet.length].src$(); // warm cache for the next frame
   }
-  showHero(0);
-  heroSet.forEach((p) => p.thumb$()); // warm cache
-  let heroTimer;
-  const startHero = () => {
+  const queueHero = () => {
+    clearTimeout(heroTimer);
     if (reduceMotion || heroSet.length < 2) return;
-    clearInterval(heroTimer);
-    heroTimer = setInterval(() => { heroIdx = (heroIdx + 1) % heroSet.length; showHero(heroIdx); }, 2600);
+    heroTimer = setTimeout(() => { showHero((heroIdx + 1) % heroSet.length); queueHero(); }, HERO_MS);
   };
-  startHero();
-  $("[data-hero-frame]").addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
+  showHero(0);
+  queueHero();
+  ticks.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-tick]");
+    if (!t) return;
+    showHero(Number(t.dataset.tick));
+    queueHero();
+  });
+  heroBg.addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
+
+  // scrolling away: the photograph lags behind and dims
+  if (!reduceMotion) {
+    let ticking = false;
+    const onScroll = () => {
+      ticking = false;
+      const h = hero.offsetHeight;
+      const y = Math.min(scrollY, h);
+      heroBg.style.setProperty("--py", `${(y * 0.35).toFixed(1)}px`);
+      heroBg.style.setProperty("--dim", (0.12 + (y / h) * 0.6).toFixed(3));
+    };
+    addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
+  }
 
   /* ------------------------------------------------------------------------
      Photographs — grid
