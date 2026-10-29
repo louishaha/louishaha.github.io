@@ -13,6 +13,12 @@ Alle Inhalte stehen in **`assets/js/content.js`**: Name, Texte, Kontakt, Fotos u
 
 Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt), `ratio` (Breite/Höhe, reserviert den Platz) und `hero: true` für das wechselnde Panorama-Fenster oben.
 
+Außerdem:
+- `light`: `"morning"`, `"day"`, `"dusk"` oder `"night"`. Der Hero beginnt mit den Fotos, die zur Uhrzeit des Besuchers passen (5–11 Uhr Morgen, 11–17 Tag, 17–21 Dämmerung, sonst Nacht), und die Zeile oben rechts sagt z. B. „Golden hour, 18:55“. Gibt es zu einer Tageszeit weniger als zwei `hero`-Fotos, leiht er sich bis zu drei Querformate mit derselben Stimmung.
+- `exposure` (optional): z. B. `"1/250 · f/8 · ISO 100 · 35 mm"`. Erscheint in der Sucherleiste der Lightbox.
+
+Der Hintergrund färbt sich beim Scrollen leicht in der Farbe der Fotos im Bild (Ambient-Licht). Die Farbe wird automatisch aus dem Vorschaubild gemessen, dafür musst du nichts eintragen.
+
 ### Filmstills
 Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblendet. Sobald dort ein Film mit Stills steht, erscheint er automatisch (Beispiel im Kommentar in `content.js`).
 
@@ -32,6 +38,8 @@ python3 -m http.server 8080
 Dann http://localhost:8080 öffnen.
 
 ## Route / Gapyear (`/route/`)
+
+Die Navigation der Startseite zeigt eine Statuszeile aus `route/data/trip.json`: vor der Reise einen Countdown („Gap year in 123 days“), unterwegs den aktuellen Ort und Tag (roter Punkt), danach die Zahl der Stationen. Der aktuelle Ort ist der unter **Standort** gesetzte, sonst die letzte Station, deren Anreise-Datum erreicht ist. **Das ist öffentlich sichtbar**, auch ohne Code.
 
 Privater Bereich mit Karte, Route und Reise-Journal. Erreichbar über das Schloss oben rechts auf der Startseite (Code `2301`) oder direkt unter `/route/`.
 

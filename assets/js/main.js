@@ -262,6 +262,17 @@
   const chunk = `<span>Say hello —</span><span><i>${esc(P.email)}</i> —</span>`;
   $("[data-marquee]").innerHTML = chunk.repeat(4);
 
+  /* Time of day — follows the visitor's own clock: the hero opens with
+     photographs in the same light, and the meta line names it. */
+  const LIGHTS = [
+    // from hour, photo tag, label
+    [5, "morning", "Morning light"],
+    [11, "day", "Daylight"],
+    [17, "dusk", "Golden hour"],
+    [21, "night", "After dark"],
+  ];
+  const lightAt = (h) => [...LIGHTS].reverse().find(([from]) => h >= from) || LIGHTS[LIGHTS.length - 1];
+
   /* Clock */
   const clockEl = $("[data-clock]");
   const locEl = $("[data-location]");
@@ -269,10 +280,11 @@
     try { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: P.timezone }); }
     catch (e) { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
   })();
+  const fmtOwn = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
   const tick = () => {
-    const t = fmt.format(new Date());
-    clockEl.textContent = `${P.location || "Local"} ${t}`;
-    locEl.textContent = `${P.location || "Local time"}, ${t.slice(0, 5)}`;
+    const now = new Date();
+    clockEl.textContent = `${P.location || "Local"} ${fmt.format(now)}`;
+    locEl.textContent = `${lightAt(now.getHours())[2]}, ${fmtOwn.format(now)}`;
   };
   tick();
   setInterval(tick, 1000);
@@ -292,11 +304,51 @@
     applyThemeLabel();
   });
 
+  /* Gap year — one line from the route page's data: a countdown before the
+     trip, where I am while it runs. Opens the same code prompt as the lock. */
+  const tripEl = $("[data-trip]");
+  fetch("route/data/trip.json", { cache: "no-cache" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((trip) => {
+      const stops = (trip?.stops || []).filter((s) => s && s.name);
+      if (!stops.length) return;
+      const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const days = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+      const today = iso(new Date());
+      const start = trip.start || stops[0].from || stops[0].to;
+      const last = stops[stops.length - 1];
+      const end = last.to || last.from;
+      let long, short, live = false;
+      if (start && today < start) {
+        const n = days(today, start);
+        long = `Gap year in ${n} ${n === 1 ? "day" : "days"}`;
+        short = `Gap year −${n}d`;
+      } else if (end && today > end) {
+        long = short = `Gap year · ${stops.length} stops`;
+      } else {
+        const here = stops.find((s) => s.id === trip.current) || [...stops].reverse().find((s) => s.from && s.from <= today) || stops[0];
+        long = `${here.name} · Day ${start ? days(start, today) + 1 : "–"}`;
+        short = here.name;
+        live = true;
+      }
+      tripEl.innerHTML = `<span class="nav__trip-dot"></span><span class="nav__trip-long">${esc(long)}</span><span class="nav__trip-short">${esc(short)}</span>`;
+      tripEl.classList.toggle("is-live", live);
+      tripEl.setAttribute("aria-label", `${long} — Gapyear-Route öffnen`);
+      tripEl.hidden = false;
+    })
+    .catch(() => { /* no route data: stay quiet */ });
+  tripEl.addEventListener("click", () => $("[data-lock]")?.click());
+
   /* ------------------------------------------------------------------------
      Hero — full-bleed photographs behind the name. Each one comes into
      focus; the ticks show progress and jump to a frame when clicked.
      ------------------------------------------------------------------------ */
-  const heroSet = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
+  const heroes = photos.filter((p) => p.hero).length ? photos.filter((p) => p.hero) : photos.slice(0, 6);
+  const nowLight = lightAt(new Date().getHours())[1];
+  let firsts = heroes.filter((p) => p.light === nowLight);
+  // too few hero frames for this hour: borrow landscape photos in the same light
+  if (firsts.length < 2) firsts = firsts.concat(photos.filter((p) => !p.hero && p.light === nowLight && p.ratio >= 1.3).slice(0, 3));
+  const heroSet = firsts.concat(heroes.filter((p) => !firsts.includes(p)));
   const hero = $("[data-hero]");
   const heroBg = $("[data-hero-bg]");
   const heroImgs = [$("[data-hero-a]"), $("[data-hero-b]")];
@@ -373,7 +425,7 @@
   grid.innerHTML = photos
     .map((p, i) => `
       <figure class="ph" style="--r:${p.ratio}">
-        <button class="ph__btn" type="button" data-open="${i}" data-cursor="View" aria-label="Open ${esc(p.title)}">
+        <button class="ph__btn" type="button" data-open="${i}" data-cursor="View" data-af aria-label="Open ${esc(p.title)}">
           <div class="ph__frame">
             <img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}">
           </div>
@@ -445,6 +497,84 @@
   layoutGrid();
   addEventListener("resize", () => requestAnimationFrame(layoutGrid));
 
+  /* Ambient light — the page takes on a faint tint of the photographs on
+     screen, like a room lit by a projected slide. Each thumbnail's colour is
+     measured once in OKLab (colourful pixels count more), then the tints in
+     view are mixed by how much of the screen they cover. */
+  const AMB_MAX = 0.045; // strongest tint (OKLab chroma) a single photo can give
+  const lin = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  function oklab(r, g, b) {
+    r = lin(r); g = lin(g); b = lin(b);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [
+      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+    ];
+  }
+  function tintOf(img) {
+    const S = 24;
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(img, 0, 0, S, S);
+    const d = g.getImageData(0, 0, S, S).data;
+    let A = 0, B = 0, W = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const [, a, b] = oklab(d[i], d[i + 1], d[i + 2]);
+      const w = Math.hypot(a, b) + 0.01;
+      A += a * w; B += b * w; W += w;
+    }
+    A /= W; B /= W;
+    // lift faint colour so it shows on a dark wall, cap strong colour
+    const C = Math.hypot(A, B) || 1;
+    const k = (AMB_MAX * (1 - Math.exp(-C / 0.03))) / C;
+    return [A * k, B * k];
+  }
+  const tints = [];
+  figs.forEach((fig, i) => {
+    $("img", fig).addEventListener("load", (e) => {
+      try { tints[i] = tintOf(e.currentTarget); } catch (err) { /* e.g. opened from file:// */ }
+    }, { once: true });
+  });
+
+  const root = document.documentElement;
+  let bgLab = [0, 0, 0];
+  const readBg = () => {
+    const m = getComputedStyle(root).getPropertyValue("--bg").trim().match(/^#([0-9a-f]{6})$/i);
+    if (m) { const n = parseInt(m[1], 16); bgLab = oklab((n >> 16) & 255, (n >> 8) & 255, n & 255); }
+  };
+  readBg();
+  new MutationObserver(() => { readBg(); ambient(); }).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+
+  function ambient() {
+    const vw = innerWidth, vh = innerHeight;
+    let a = 0, b = 0, cover = 0;
+    figs.forEach((fig, i) => {
+      if (!tints[i]) return;
+      const r = fig.getBoundingClientRect();
+      const h = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      if (h <= 0 || !r.width) return;
+      const w = (h * r.width) / (vw * vh);
+      a += tints[i][0] * w; b += tints[i][1] * w; cover += w;
+    });
+    if (cover < 0.02) { root.style.removeProperty("--amb"); return; }
+    const dark = bgLab[0] < 0.5;
+    const k = dark ? 1 : 0.7; // a lit table needs less
+    const L = bgLab[0] + Math.min(cover, 1) * (dark ? 0.018 : -0.012);
+    root.style.setProperty("--amb", `oklab(${L.toFixed(4)} ${(bgLab[1] + a * k).toFixed(4)} ${(bgLab[2] + b * k).toFixed(4)})`);
+  }
+  let ambT = 0, ambEnd;
+  addEventListener("scroll", () => {
+    clearTimeout(ambEnd);
+    ambEnd = setTimeout(ambient, 160); // settle on where the scroll stopped
+    const now = performance.now();
+    if (now - ambT > 120) { ambT = now; requestAnimationFrame(ambient); }
+  }, { passive: true });
+  addEventListener("load", ambient); // landing mid-page (anchor, reload)
+
   // which photo is hovered (drives the dimming in WebGL)
   let hoveredIdx = -1;
   if (finePointer) {
@@ -486,7 +616,7 @@
         .map((s, si) => {
           const idx = stillIdx++;
           return `
-          <button class="still" type="button" data-still="${idx}" data-reel-no="${fi}" data-cursor="View" style="--ar:${f.ratio}" aria-label="Open still from ${esc(f.title)}">
+          <button class="still" type="button" data-still="${idx}" data-reel-no="${fi}" data-cursor="View" data-af style="--ar:${f.ratio}" aria-label="Open still from ${esc(f.title)}">
             <div class="still__frame">
               <img alt="Still from ${esc(f.title)}${s.subtitle ? `: ${esc(s.subtitle)}` : ""}" loading="lazy">
               ${s.timecode ? `<span class="still__tc">${esc(s.timecode)}</span>` : ""}
@@ -635,18 +765,32 @@
   const lbCount = $("[data-lb-count]");
   const lbTitle = $("[data-lb-title]");
   const lbMeta = $("[data-lb-meta]");
+  const lbExp = $("[data-lb-exp]");
+  const lbVf = $("[data-lb-vf]");
   let lbList = [];
   let lbIdx = 0;
   let lastFocus = null;
 
+  // viewfinder corners sit on the picture itself, whatever its shape
+  const placeVf = () => {
+    lbVf.style.cssText = `left:${lbImg.offsetLeft}px;top:${lbImg.offsetTop}px;width:${lbImg.offsetWidth}px;height:${lbImg.offsetHeight}px`;
+  };
+  addEventListener("resize", () => { if (!lb.hidden) placeVf(); });
+
   function renderLb() {
     const it = lbList[lbIdx];
     lbImg.classList.add("is-swapping");
+    lb.classList.remove("is-focused");
+    lbExp.textContent = it.exposure || "";
     lbCount.textContent = `${pad(lbIdx + 1)} / ${pad(lbList.length)}`;
     lbTitle.textContent = it.subtitle ? `“${it.subtitle}”` : it.title;
     lbMeta.textContent = it.subtitle ? `${it.title} — ${it.meta}` : it.meta;
     it.src$().then((src) => {
-      const done = () => lbImg.classList.remove("is-swapping");
+      const done = () => {
+        lbImg.classList.remove("is-swapping");
+        lb.classList.add("is-focused");
+        placeVf();
+      };
       if (lbImg.src === src) return done();
       lbImg.onload = done;
       lbImg.src = src;
@@ -704,6 +848,7 @@
   if (finePointer) {
     const cur = $(".cursor");
     const blob = $(".cursor__blob");
+    const af = $(".cursor__af");
     const label = $("[data-cursor-label]");
     document.documentElement.classList.add("has-cursor");
 
@@ -721,16 +866,21 @@
     let scale = SIZES.dot, target = SIZES.dot, press = 1, stretch = 0, angle = 0;
     let lastSY = scrollY, scrollV = 0, lastProbe = 0, last = performance.now();
     addEventListener("pointermove", (e) => { x = e.clientX; y = e.clientY; cur.classList.remove("is-hidden"); }, { passive: true });
-    addEventListener("pointerdown", () => { press = 0.82; });
-    addEventListener("pointerup", () => { press = 1; });
+    // over a photo the cursor is an AF point; pressing lights it red like
+    // the focus confirmation in a Canon viewfinder
+    let focusT;
+    addEventListener("pointerdown", () => { press = 0.82; clearTimeout(focusT); cur.classList.add("is-focus"); });
+    addEventListener("pointerup", () => { press = 1; focusT = setTimeout(() => cur.classList.remove("is-focus"), 220); });
     document.addEventListener("pointerleave", () => cur.classList.add("is-hidden"));
 
     const setHover = (el) => {
       const t = el?.closest?.("[data-cursor]");
       const link = el?.closest?.("a, button");
-      cur.classList.toggle("is-label", !!t);
+      const isAf = !!t && t.hasAttribute("data-af");
+      cur.classList.toggle("is-af", isAf);
+      cur.classList.toggle("is-label", !!t && !isAf);
       cur.classList.toggle("is-link", !t && !!link);
-      target = t ? SIZES.label : link ? SIZES.link : SIZES.dot;
+      target = isAf ? SIZES.dot : t ? SIZES.label : link ? SIZES.link : SIZES.dot;
       if (t) label.textContent = t.dataset.cursor;
     };
 
@@ -761,6 +911,7 @@
       scale += (target * press - scale) * k(0.14, dt);
       blob.style.transform = `translate3d(${cx}px, ${cy}px, 0) rotate(${angle}rad) scale(${scale * (1 + stretch)}, ${scale * (1 - stretch * 0.55)})`;
       label.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
+      af.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
