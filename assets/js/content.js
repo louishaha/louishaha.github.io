@@ -18,7 +18,7 @@ window.PORTFOLIO = {
   role: "Photography",
   location: "",            // z.B. "Berlin" – erscheint neben der Uhrzeit
   timezone: "Europe/Berlin",
-  email: "hello@louiskoller.cc",
+  email: "mail@louiskoller.cc",
   links: [
     // { label: "Instagram", url: "https://instagram.com/DEIN_NAME" },
   ],

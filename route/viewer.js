@@ -7,6 +7,7 @@
   const { $, $$, esc } = RT;
   const panel = $("[data-panel]");
   const body = $("[data-body]");
+  const LEGAL = `<p class="legal-links"><a href="/impressum/">Impressum</a><a href="/datenschutz/">Datenschutz</a></p>`;
   const mobile = matchMedia("(max-width: 760px)");
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -372,7 +373,7 @@
     const depth = kind === "post" && currentPost ? 2 : html.includes('class="back"') ? 1 : 0;
     body.dataset.dir = depth > lastDepth ? "fwd" : depth < lastDepth ? "back" : "";
     lastDepth = depth;
-    body.innerHTML = html;
+    body.innerHTML = html + LEGAL;
     body.scrollTop = 0;
     renderHead();
   };

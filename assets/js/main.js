@@ -251,9 +251,10 @@
       .map((d) => `<div><h3>${esc(d.label)}</h3><ul>${d.items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`)
       .join("") + `<div><h3>${contactBlock.label}</h3><ul>${contactBlock.html}</ul></div>`;
 
-  $("[data-links]").innerHTML = (P.links || [])
+  // Social links go in front of the static Impressum / Datenschutz links
+  $("[data-links]").insertAdjacentHTML("afterbegin", (P.links || [])
     .map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`)
-    .join("");
+    .join(""));
 
   const mail = $("[data-mail]");
   mail.href = `mailto:${P.email}`;

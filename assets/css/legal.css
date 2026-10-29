@@ -1,0 +1,73 @@
+/* ==========================================================================
+   Legal pages (Impressum, Datenschutz) — same paper and type as the portfolio,
+   set for reading.
+   ========================================================================== */
+
+:root {
+  --bg: #0d0c0a;
+  --fg: #ebe5d9;
+  --muted: #857f75;
+  --line: rgba(235, 229, 217, 0.14);
+  --accent: #ff3b1f;
+
+  --serif: "Instrument Serif", "Times New Roman", Times, serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --gutter: clamp(16px, 2.2vw, 32px);
+}
+
+:root[data-theme="light"] {
+  --bg: #ebe5d9;
+  --fg: #15130f;
+  --muted: #6f695f;
+  --line: rgba(21, 19, 15, 0.16);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+}
+
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--accent); }
+:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+::selection { background: var(--accent); color: #000; }
+
+.legal-nav {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 14px var(--gutter);
+  border-bottom: 1px solid var(--line);
+  text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px;
+}
+.legal-nav a { text-decoration: none; }
+.legal-nav nav { display: flex; gap: 24px; }
+.legal-nav [aria-current="page"] { color: var(--muted); }
+
+.legal {
+  max-width: 72ch;
+  padding: clamp(48px, 9vw, 120px) var(--gutter) clamp(64px, 10vw, 140px);
+}
+.legal h1 {
+  margin: 0 0 clamp(32px, 5vw, 64px);
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(3rem, 9vw, 7rem); line-height: 0.95; letter-spacing: -0.02em;
+}
+.legal h2 {
+  margin: 2.6em 0 0.6em;
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(1.5rem, 2.6vw, 2rem); line-height: 1.1;
+}
+.legal h3 { margin: 1.8em 0 0.4em; font-size: inherit; font-weight: 500; }
+.legal p, .legal ul { margin: 0 0 1em; }
+.legal ul { padding-left: 1.2em; }
+.legal address { font-style: normal; }
+.legal .muted { color: var(--muted); }
