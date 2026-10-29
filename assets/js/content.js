@@ -74,6 +74,9 @@ window.PORTFOLIO = {
     { src: "images/photos/36-green-study.jpg", thumb: "images/thumbs/36-green-study.jpg", title: "Green Study", place: "", year: "", camera: "", ratio: "2000/1125" },
     { src: "images/photos/37-last-light.jpg", thumb: "images/thumbs/37-last-light.jpg", title: "Last Light", place: "", year: 2024, camera: "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II", ratio: "5543/3118" },
     { src: "images/photos/38-red-sun.jpg", thumb: "images/thumbs/38-red-sun.jpg", title: "Red Sun", place: "", year: "", camera: "", ratio: "2000/1500" },
+    { src: "images/photos/39-after-the-rain.jpg", thumb: "images/thumbs/39-after-the-rain.jpg", title: "After the Rain", place: "", year: "", camera: "", ratio: "2000/1125" },
+    { src: "images/photos/40-ledge.jpg", thumb: "images/thumbs/40-ledge.jpg", title: "Ledge", place: "", year: "", camera: "", ratio: "2000/1125" },
+    { src: "images/photos/41-stag.jpg", thumb: "images/thumbs/41-stag.jpg", title: "Stag", place: "", year: "", camera: "", ratio: "2000/1333" },
   ],
 
   /* ---------------------------------------------------- Filme / Standbilder
