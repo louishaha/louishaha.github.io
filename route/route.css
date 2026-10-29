@@ -109,6 +109,12 @@ input, textarea, select { font: inherit; color: inherit; }
 }
 .gate__back:active { opacity: 0.5; transition: none; }
 
+/* Impressum / Datenschutz: under the gate and at the end of every panel view */
+.legal-links { display: flex; justify-content: center; gap: 16px; margin: 0; padding: 4px 12px 20px; font-size: 0.75rem; }
+.legal-links a { color: var(--label-2); text-decoration: none; }
+.legal-links a:active { opacity: 0.5; }
+.gate .legal-links { padding: 18px 0 0; }
+
 /* 4-digit code (one real input, four painted dots) */
 .code { position: relative; display: flex; gap: 24px; padding: 14px 26px; }
 .code__slot {

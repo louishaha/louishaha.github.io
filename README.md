@@ -16,6 +16,13 @@ Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt),
 ### Filmstills
 Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblendet. Sobald dort ein Film mit Stills steht, erscheint er automatisch (Beispiel im Kommentar in `content.js`).
 
+## Impressum & Datenschutz
+
+- `impressum/index.html` und `datenschutz/index.html`, verlinkt im Footer und in `/route/`.
+- Die Seite setzt keine Cookies und lädt nichts von Google: Die Schriften liegen in `assets/fonts/` (eingebunden über `assets/css/fonts.css`).
+- **Wenn du etwas Externes einbaust** (Instagram-Embed, Analytics, Google Maps, Kontaktformular, neue Schrift aus dem Netz), trag es in die Datenschutzerklärung ein. Bei Tracking oder Analytics brauchst du außerdem einen Cookie-Banner mit Einwilligung.
+- Ändert sich Adresse oder E-Mail, beide Seiten anpassen (und `email` in `content.js`).
+
 ## Lokal ansehen
 
 ```sh
