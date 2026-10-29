@@ -9,9 +9,11 @@ Alle Inhalte stehen in **`assets/js/content.js`**: Name, Texte, Kontakt, Fotos u
 ### Neues Foto
 1. Große Version (lange Kante ca. 2400 px, JPG, Qualität ~80) nach `images/photos/` legen.
 2. Kleine Version (ca. 1200 px) mit gleichem Namen nach `images/thumbs/` legen. Sie wird im Raster genutzt und macht die Seite schnell.
-3. In `content.js` einen Eintrag in `photos` ergänzen. Die Reihenfolge dort ist die Reihenfolge auf der Seite.
+3. In `content.js` einen Eintrag in `photos` ergänzen.
 
-Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt), `ratio` (Breite/Höhe, reserviert den Platz) und `hero: true` für das wechselnde Panorama-Fenster oben.
+Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt), `ratio` (Breite/Höhe, reserviert den Platz), `size` (1 = klein, 2 = mittel, 3 = groß) und `hero: true` für das wechselnde Panorama-Fenster oben.
+
+`size` ist nur ein Richtwert: Jedes Bild bekommt etwas Zufall dazu, und wie groß es am Ende wird, hängt auch davon ab, mit welchen Bildern es in einer Reihe landet. Die Anordnung steuert `shuffle` in `content.js`: `true` = bei jedem Besuch neu gemischt, eine Zahl = feste zufällige Anordnung (andere Zahl = andere Anordnung), `false` = Reihenfolge wie in der Liste.
 
 ### Filmstills
 Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblendet. Sobald dort ein Film mit Stills steht, erscheint er automatisch (Beispiel im Kommentar in `content.js`).

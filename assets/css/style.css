@@ -347,6 +347,7 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   position: relative;
   transition: opacity 0.6s var(--ease);
 }
+.ph:only-child { flex-grow: 1; } /* a lone portrait (ratio < 1) would not fill its row */
 .ph__btn { display: block; width: 100%; text-align: left; cursor: pointer; }
 .ph__frame {
   position: relative;
