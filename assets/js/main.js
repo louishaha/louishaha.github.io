@@ -193,9 +193,9 @@
      ------------------------------------------------------------------------ */
   /* Photos are grouped into rows once per visit, independent of the screen
      width. `size` (1–3) sets how big a photo wants to be; a random factor per
-     photo keeps frames of the same size from all looking alike. Phones only
-     split these groups further (see layoutGrid), so the order is the same on
-     every screen and the lightbox follows it. */
+     photo keeps frames of the same size from all looking alike. Phones regroup
+     them into smaller rows (see layoutGrid), moving a photo by a few places at
+     most, so the order is nearly the same everywhere. */
   const WANT = {
     // row width / row height a photo of this size aims for: [desktop, phone]
     3: [[1.4, 2.3], [1.0, 1.4]],
@@ -221,25 +221,49 @@
   // how far the row would end up from its lead's wanted height with `c` added
   function cost(row, c) {
     const lead = row[0];
-    if (c.size > lead.size) return Infinity;
-    // a big photo shares its row only with something clearly smaller
-    if (lead.size === 3 && (c.size === 3 || lead.ratio / (ratioSum(row) + c.ratio) < 0.6)) return Infinity;
-    // and a smaller photo never ends up wider than the one leading the row
+    // big photos get the full width to themselves
+    if (lead.size === 3 || c.size === 3) return Infinity;
+    // a smaller photo never ends up wider than the one leading the row
     if (c.size < lead.size && c.ratio > lead.ratio) return Infinity;
-    return miss([...row, c], lead.want) + (c.size < lead.size && lead.size < 3 ? 0.12 : 0);
+    return miss([...row, c], lead.want) + (c.size !== lead.size ? 0.12 : 0);
+  }
+  // A big portrait can't fill the width on its own: it gets a column of two
+  // smaller landscapes stacked beside it (an array inside the row).
+  const stackable = (c) => c.size < 3 && c.ratio >= 1.2;
+  // A row of smaller photos that comes out short (a lone portrait, a leftover
+  // at the end) would be blown up to full width, so it joins the row of
+  // smaller photos that has the most room left.
+  function tidy(rows) {
+    const plain = (row) => row.every((x) => !Array.isArray(x) && x.size < 3);
+    for (let i = 0; i < rows.length; i++) {
+      if (!plain(rows[i]) || ratioSum(rows[i]) >= 2) continue;
+      const host = rows.filter((r) => r !== rows[i] && plain(r)).sort((a, b) => ratioSum(a) - ratioSum(b))[0];
+      if (!host) continue;
+      host.push(...rows[i]);
+      rows.splice(i--, 1);
+    }
+    return rows;
   }
   function groupRows(items) {
     const rows = [];
     if (shuffle === false) {
       for (let i = 0; i < items.length;) {
         const row = [items[i++]];
+        const next = items.slice(i, i + 2);
+        if (row[0].size === 3 && row[0].ratio < 1 && next.length === 2 && next.every(stackable)) { row.push(next); i += 2; }
         while (i < items.length && cost(row, items[i]) < miss(row, row[0].want)) row.push(items[i++]);
         rows.push(row);
       }
-      return rows;
+      return tidy(rows);
     }
     const pools = { 1: [], 2: [], 3: [] };
     mix(items).forEach((x) => pools[x.size].push(x));
+    // big portraits come in the first half, while there is still plenty to stack beside them
+    const big = pools[3];
+    big.filter((x) => x.ratio < 1).forEach((x) => {
+      big.splice(big.indexOf(x), 1);
+      big.splice(Math.floor(rand() * Math.ceil(big.length / 2)), 0, x);
+    });
     const perRow = { 1: 3, 2: 2, 3: 1 };
     let prev = 0;
     while (pools[1].length + pools[2].length + pools[3].length) {
@@ -254,6 +278,11 @@
       if (bigOk && pools[3].length > otherRows) s = 2;
       const size = pools[s + 1].length ? s + 1 : [3, 2, 1].find((n) => pools[n].length);
       const row = [pools[size].shift()];
+      if (row[0].size === 3 && row[0].ratio < 1) {
+        const col = mix([...pools[1], ...pools[2]].filter(stackable)).slice(0, 2);
+        col.forEach((c) => pools[c.size].splice(pools[c.size].indexOf(c), 1));
+        if (col.length === 2) row.push(col); else row.push(...col);
+      }
       for (;;) {
         let best = null, bestCost = miss(row, row[0].want);
         for (const n of [1, 2, 3]) {
@@ -269,11 +298,11 @@
       prev = size;
       rows.push(mix(row));
     }
-    return rows;
+    return tidy(rows);
   }
   const groups = groupRows(draft);
 
-  const photos = groups.flat().map(({ p, k, size, ratio, want, wantPhone }, i) => ({
+  const photos = groups.flat(2).map(({ p, k, size, ratio, want, wantPhone }, i) => ({
     ...p,
     no: pad(i + 1, 3),
     size, ratio, want, wantPhone,
@@ -284,7 +313,8 @@
     meta: [p.place, p.camera, p.year].filter(Boolean).join(" — "),
   }));
   let nextIdx = 0;
-  const rowGroups = groups.map((g) => g.map(() => nextIdx++)); // indices into photos
+  // indices into photos, same shape as groups (a column stays a nested array)
+  const rowGroups = groups.map((g) => g.map((x) => (Array.isArray(x) ? x.map(() => nextIdx++) : nextIdx++)));
 
   const films = (P.films || []).map((f, fi) => {
     const ratio = parseRatio(f.aspect, 2.39);
@@ -473,23 +503,38 @@
     if (b) openLightbox(photos, +b.dataset.open);
   });
 
-  /* Justified rows. Every photo in a row has the same height and keeps its own
-     aspect ratio. Rows come from rowGroups (see Data); a row holding a single
-     photo is narrowed to the size that photo asks for, so not every lone frame
-     runs edge to edge. Phones split the groups into smaller rows. */
+  /* Justified rows. Every row fills the full width, every photo in it has the
+     same height and keeps its own aspect ratio. Rows come from rowGroups (see
+     Data); phones regroup the same order into smaller rows. */
   const sumOf = (row) => row.reduce((t, i) => t + photos[i].ratio, 0);
-  function splitForPhone(group) {
+  function phoneRows() {
+    const list = rowGroups.flat(2);
     const rows = [];
     let row = [];
-    group.forEach((i) => {
-      const next = [...row, i];
+    for (let n = 0; n < list.length; n++) {
+      const i = list[n];
+      // a smaller portrait would fill the whole screen on its own: it gets two
+      // landscapes from close by stacked beside it instead
+      if (photos[i].size < 3 && photos[i].ratio < 1) {
+        const ok = (j) => photos[j].size < 3 && photos[j].ratio >= 1.2;
+        const stack = [...row.filter(ok), ...list.slice(n + 1, n + 4).filter(ok)].slice(0, 2);
+        if (stack.length === 2) {
+          row = row.filter((j) => !stack.includes(j));
+          if (row.length) rows.push(row);
+          row = [];
+          stack.forEach((j) => { const at = list.indexOf(j, n + 1); if (at > n) list.splice(at, 1); });
+          rows.push([i, stack]);
+          continue;
+        }
+      }
       // big photos get a row of their own; otherwise keep adding while the row
       // gets closer to what its biggest photo wants
+      const next = [...row, i];
       const want = Math.min(...next.map((j) => photos[j].wantPhone));
       const alone = next.some((j) => photos[j].size === 3 || photos[j].ratio / sumOf(next) < 0.28);
       if (row.length && (alone || Math.abs(Math.log(sumOf(next) / want)) > Math.abs(Math.log(sumOf(row) / want)))) { rows.push(row); row = []; }
       row.push(i);
-    });
+    }
     if (row.length) rows.push(row);
     return rows;
   }
@@ -500,22 +545,35 @@
     laidOutFor = W;
     const gap = parseFloat(getComputedStyle(grid).getPropertyValue("--gap")) || 10;
     const mobile = W < 700;
-    const maxH = mobile ? W * 1.25 : innerHeight * 0.95;
-    const rows = mobile ? rowGroups.flatMap(splitForPhone) : rowGroups;
+    const maxH = innerHeight * (mobile ? 0.85 : 1);
+    const rows = mobile ? phoneRows() : rowGroups;
+    const setR = (i, r) => figs[i].style.setProperty("--r", r);
 
     grid.textContent = "";
     rows.forEach((r) => {
       const el = document.createElement("div");
       el.className = "row";
-      // too tall (e.g. a lone portrait): shrink the row instead of cropping
-      let width = Math.min(W, maxH * sumOf(r) + gap * (r.length - 1));
-      // a lone photo, or a row far short of what its photos want (leftovers),
-      // is narrowed to the height its biggest photo asks for
-      const want = Math.min(...r.map((i) => (mobile ? photos[i].wantPhone : photos[i].want)));
-      const scale = sumOf(r) / want;
-      if (r.length === 1 || scale < 0.9) width = Math.min(width, W * Math.max(mobile ? 0.5 : 0.38, scale));
-      if (width < W - 0.5) el.style.maxWidth = `${width}px`;
-      r.forEach((i) => el.appendChild(figs[i]));
+      const plain = r.filter((x) => !Array.isArray(x));
+      const stack = r.find(Array.isArray);
+      const free = W - gap * (r.length - 1);
+      let colEl;
+      if (stack) {
+        // row height where the portrait and the stacked column end up equal
+        const R = sumOf(plain);
+        const S = stack.reduce((t, i) => t + 1 / photos[i].ratio, 0);
+        const H = (free * S + gap * (stack.length - 1)) / (1 + R * S);
+        [...plain, ...stack].forEach((i) => setR(i, photos[i].ratio));
+        colEl = document.createElement("div");
+        colEl.className = "col";
+        colEl.style.flexGrow = (free - R * H) / H;
+        stack.forEach((i) => colEl.appendChild(figs[i]));
+      } else {
+        // taller than the screen: crop top and bottom a little instead of
+        // leaving empty space at the sides
+        const f = Math.min(1.6, Math.max(1, free / (maxH * sumOf(plain))));
+        plain.forEach((i) => setR(i, photos[i].ratio * f));
+      }
+      r.forEach((x) => el.appendChild(Array.isArray(x) ? colEl : figs[x]));
       grid.appendChild(el);
     });
   }
