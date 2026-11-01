@@ -22,6 +22,13 @@ Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblend
 
 - `impressum/index.html` und `datenschutz/index.html`, verlinkt im Footer und in `/route/`.
 - Die Seite setzt keine Cookies und lädt nichts von Google: Die Schriften liegen in `assets/fonts/` (eingebunden über `assets/css/fonts.css`).
+- Besucherstatistik: **Vercel Web Analytics** (cookielos), eingebunden über zwei Script-Tags im `<head>` von `index.html`, `impressum/`, `datenschutz/` und `route/index.html` (nicht im Admin). Funktioniert nur, wenn die Seite auf Vercel läuft und im Vercel-Dashboard unter *Analytics* aktiviert ist. Neue Seiten bekommen das Snippet ebenfalls:
+  ```html
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  ```
 - **Wenn du etwas Externes einbaust** (Instagram-Embed, Analytics, Google Maps, Kontaktformular, neue Schrift aus dem Netz), trag es in die Datenschutzerklärung ein. Bei Tracking oder Analytics brauchst du außerdem einen Cookie-Banner mit Einwilligung.
 - Ändert sich Adresse oder E-Mail, beide Seiten anpassen (und `email` in `content.js`).
 
