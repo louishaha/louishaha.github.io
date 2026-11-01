@@ -1,6 +1,6 @@
 /* ==========================================================================
    Lock in the nav → code prompt → /route/ (private Gapyear page)
-   A curtain, not a vault: the route page itself is public on GitHub Pages.
+   A curtain, not a vault: the route page itself is public.
    ========================================================================== */
 (() => {
   "use strict";

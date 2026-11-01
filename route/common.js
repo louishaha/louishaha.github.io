@@ -40,7 +40,7 @@
   };
 
   /* ------------------------------------------------------------------ Gate
-     A curtain, not a vault: everything here is public on GitHub Pages.    */
+     A curtain, not a vault: everything here is public (repo + site).    */
   const fnv = (s) => {
     let h = 0x811c9dc5;
     for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }

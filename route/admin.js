@@ -246,7 +246,7 @@
         busy = false;
         render();
         setStatus("ok", "Veröffentlicht ✓ In ca. 1 Minute online.");
-        RT.toast("Veröffentlicht. GitHub Pages braucht ca. 1 Minute.", 4000);
+        RT.toast("Veröffentlicht. Vercel braucht ca. 1 Minute.", 4000);
         return;
       }
       throw new Error("Konnte nicht speichern, bitte nochmal versuchen.");
@@ -957,7 +957,7 @@
     } catch (e) { /* offline: no warning */ }
     const box = document.createElement("p");
     box.className = "hint warn";
-    box.innerHTML = `Achtung: Die Website zeigt einen anderen Stand als der Branch <code>${esc(branch)}</code>, in den hier gespeichert wird. Wahrscheinlich läuft GitHub Pages noch von einem anderen Branch (Repo → Settings → Pages → Branch: <code>${esc(branch)}</code>).`;
+    box.innerHTML = `Achtung: Die Website zeigt einen anderen Stand als der Branch <code>${esc(branch)}</code>, in den hier gespeichert wird. Wahrscheinlich veröffentlicht Vercel einen anderen Branch (Vercel → Project → Settings → Git → Production Branch: <code>${esc(branch)}</code>).`;
     $(".adm__side").prepend(box);
   };
 

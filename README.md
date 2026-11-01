@@ -1,6 +1,6 @@
 # louiskoller.cc
 
-Fotografie-Portfolio. Reines HTML/CSS/JS ohne Build-Schritt, läuft direkt auf GitHub Pages (Branch `main`).
+Fotografie-Portfolio. Reines HTML/CSS/JS ohne Build-Schritt, läuft auf Vercel (Branch `main`, jeder Push wird automatisch veröffentlicht). Der Code liegt auf GitHub.
 
 ## Inhalte pflegen
 
@@ -22,14 +22,14 @@ Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblend
 
 - `impressum/index.html` und `datenschutz/index.html`, verlinkt im Footer und in `/route/`.
 - Die Seite setzt keine Cookies und lädt nichts von Google: Die Schriften liegen in `assets/fonts/` (eingebunden über `assets/css/fonts.css`).
-- Besucherstatistik: **Vercel Web Analytics** (cookielos), eingebunden über zwei Script-Tags im `<head>` von `index.html`, `impressum/`, `datenschutz/` und `route/index.html` (nicht im Admin). Funktioniert nur, wenn die Seite auf Vercel läuft und im Vercel-Dashboard unter *Analytics* aktiviert ist. Neue Seiten bekommen das Snippet ebenfalls:
+- Besucherstatistik: **Vercel Web Analytics** (cookielos), eingebunden über zwei Script-Tags im `<head>` von `index.html`, `impressum/`, `datenschutz/` und `route/index.html` (nicht im Admin). Zählt nur, wenn Web Analytics im Vercel-Dashboard unter *Analytics* aktiviert ist. Neue Seiten bekommen das Snippet ebenfalls:
   ```html
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
   ```
-- **Wenn du etwas Externes einbaust** (Instagram-Embed, Analytics, Google Maps, Kontaktformular, neue Schrift aus dem Netz), trag es in die Datenschutzerklärung ein. Bei Tracking oder Analytics brauchst du außerdem einen Cookie-Banner mit Einwilligung.
+- **Wenn du etwas Externes einbaust** (Instagram-Embed, Analytics, Google Maps, Kontaktformular, neue Schrift aus dem Netz), trag es in die Datenschutzerklärung ein. Bei Tracking oder Analytics mit Cookies bzw. Wiedererkennung von Besuchern brauchst du außerdem einen Banner mit Einwilligung.
 - Ändert sich Adresse oder E-Mail, beide Seiten anpassen (und `email` in `content.js`).
 
 ## Lokal ansehen
@@ -44,7 +44,7 @@ Dann http://localhost:8080 öffnen.
 
 Privater Bereich mit Karte, Route und Reise-Journal. Erreichbar über das Schloss oben rechts auf der Startseite (Code `2301`) oder direkt unter `/route/`.
 
-> Der Code ist nur ein Vorhang gegen Zufallsbesucher: Die Seite liegt öffentlich auf GitHub Pages, wer den Quellcode oder einen Bild-Link kennt, kommt ran. Nichts wirklich Privates einstellen.
+> Der Code ist nur ein Vorhang gegen Zufallsbesucher: Die Seite und das Repo sind öffentlich, wer den Quellcode oder einen Bild-Link kennt, kommt ran. Nichts wirklich Privates einstellen.
 
 ### Bearbeiten (nur du)
 1. `/route/admin.html` öffnen (in der Ansicht erscheint danach oben ein „Bearbeiten“-Knopf).
