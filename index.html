@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="de" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Louis Koller — Photography</title>
-  <meta name="description" content="Louis Koller — photographer. Landscape, wildlife and city photographs.">
+  <title>Louis Koller — Fotografie</title>
+  <meta name="description" content="Louis Koller — Fotograf. Landschaft, Wildtiere und Stadt.">
   <meta name="theme-color" content="#0d0c0a">
   <meta property="og:title" content="Louis Koller — Photography">
   <meta property="og:image" content="https://www.louiskoller.cc/images/thumbs/01-into-the-fog.jpg">
@@ -13,9 +13,10 @@
   <meta property="og:url" content="https://www.louiskoller.cc/">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230d0c0a'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff3b1f'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/css/fonts.css?v=1">
-  <link rel="stylesheet" href="assets/css/style.css?v=10">
+  <link rel="stylesheet" href="assets/css/style.css?v=11">
   <script>
     try { var t = localStorage.getItem("lk-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    try { if (localStorage.getItem("lk-lite") === "1") document.documentElement.classList.add("lite"); } catch (e) {}
     document.documentElement.classList.add("js");
   </script>
   <script>
@@ -24,13 +25,13 @@
   <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
-  <a class="skip" href="#photographs">Skip to work</a>
+  <a class="skip" href="#photographs" data-i18n="skip">Zu den Fotos</a>
 
   <!-- Intro: "developing" -->
   <div class="loader" aria-hidden="true">
     <div class="loader__row">
       <span class="loader__dot"></span>
-      <span>Developing</span>
+      <span data-i18n="developing">Entwickeln</span>
       <span class="loader__count">000</span>
     </div>
   </div>
@@ -38,16 +39,19 @@
   <header class="nav">
     <a class="nav__name" href="#top" data-name></a>
     <nav class="nav__links" aria-label="Sections">
-      <a href="#photographs">Photographs<sup>01</sup></a>
-      <a href="#stills">Stills<sup>02</sup></a>
-      <a href="#info">Info<sup>03</sup></a>
+      <a href="#photographs"><span data-i18n="navPhotos">Fotografien</span><sup>01</sup></a>
+      <a href="#stills"><span data-i18n="navStills">Stills</span><sup>02</sup></a>
+      <a href="#info"><span data-i18n="navInfo">Info</span><sup>03</sup></a>
     </nav>
     <div class="nav__right">
       <span class="nav__clock" data-clock></span>
-      <button class="nav__theme" type="button" data-theme-toggle aria-label="Toggle light table mode">
-        <span class="nav__theme-dot"></span><span data-theme-label>Light table</span>
+      <button class="nav__theme" type="button" data-theme-toggle aria-label="Leuchttisch-Modus umschalten" data-i18n-aria="themeAria">
+        <span class="nav__theme-dot"></span><span data-theme-label>Leuchttisch</span>
       </button>
-      <button class="nav__lock" type="button" data-lock aria-label="Privater Bereich" title="Privat">
+      <button class="nav__lang" type="button" data-lang-toggle aria-label="Switch to English">
+        <span data-lang="de" class="is-on">DE</span><span aria-hidden="true">/</span><span data-lang="en">EN</span>
+      </button>
+      <button class="nav__lock" type="button" data-lock aria-label="Privater Bereich" title="Privat" data-i18n-aria="lockAria" data-i18n-title="lockTitle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
       </button>
     </div>
@@ -80,7 +84,7 @@
       </h1>
 
       <div class="hero__foot">
-        <a href="#photographs" class="hero__scroll">Scroll <span aria-hidden="true">↓</span></a>
+        <a href="#photographs" class="hero__scroll"><span data-i18n="scroll">Scrollen</span> <span aria-hidden="true">↓</span></a>
         <span class="hero__ticks" data-hero-ticks></span>
         <span class="hero__caption" data-hero-caption></span>
       </div>
@@ -90,7 +94,7 @@
     <section class="section" id="photographs">
       <div class="section-head">
         <span class="section-head__num">(01)</span>
-        <h2 class="section-head__title">Photo&shy;graphs</h2>
+        <h2 class="section-head__title" data-i18n-html="photosTitle">Foto&shy;grafien</h2>
         <div class="section-head__side">
           <span data-photo-count></span>
         </div>
@@ -130,30 +134,31 @@
   </main>
 
   <footer class="footer">
-    <a class="marquee" data-mail aria-label="Send an email">
+    <a class="marquee" data-mail aria-label="E-Mail schreiben" data-i18n-aria="mailAria">
       <span class="marquee__track" data-marquee></span>
     </a>
     <div class="footer__row">
       <span>© <span data-year></span> <span data-fullname></span></span>
       <span class="footer__links" data-links>
-        <a href="impressum/">Impressum</a>
-        <a href="datenschutz/">Datenschutz</a>
+        <a href="impressum/" data-i18n="imprint">Impressum</a>
+        <a href="datenschutz/" data-i18n="privacy">Datenschutz</a>
+        <button type="button" class="footer__lite" data-lite-toggle aria-pressed="false"><span data-i18n="liteLabel">Leichte Version</span>: <span data-lite-state>aus</span></button>
       </span>
-      <a href="#top">Back to top ↑</a>
+      <a href="#top" data-i18n="backTop">Nach oben ↑</a>
     </div>
   </footer>
 
   <!-- Lightbox -->
-  <div class="lb" role="dialog" aria-modal="true" aria-label="Image viewer" data-lb hidden>
+  <div class="lb" role="dialog" aria-modal="true" aria-label="Bildansicht" data-i18n-aria="viewer" data-lb hidden>
     <div class="lb__top">
       <span data-lb-count></span>
-      <button type="button" class="lb__close" data-lb-close>Close <span aria-hidden="true">✕</span></button>
+      <button type="button" class="lb__close" data-lb-close><span data-i18n="close">Schließen</span> <span aria-hidden="true">✕</span></button>
     </div>
     <div class="lb__stage">
       <img alt="" data-lb-img>
-      <button type="button" class="lb__hit lb__hit--prev" data-lb-prev data-cursor="Prev" aria-label="Previous image"></button>
-      <button type="button" class="lb__hit lb__hit--close" data-lb-close-zone data-cursor="Close" aria-label="Close viewer"></button>
-      <button type="button" class="lb__hit lb__hit--next" data-lb-next data-cursor="Next" aria-label="Next image"></button>
+      <button type="button" class="lb__hit lb__hit--prev" data-lb-prev data-cursor="Zurück" data-i18n-cursor="prev" aria-label="Vorheriges Bild" data-i18n-aria="prevAria"></button>
+      <button type="button" class="lb__hit lb__hit--close" data-lb-close-zone data-cursor="Schließen" data-i18n-cursor="close" aria-label="Ansicht schließen" data-i18n-aria="closeAria"></button>
+      <button type="button" class="lb__hit lb__hit--next" data-lb-next data-cursor="Weiter" data-i18n-cursor="next" aria-label="Nächstes Bild" data-i18n-aria="nextAria"></button>
     </div>
     <div class="lb__bottom">
       <span class="lb__title" data-lb-title></span>
@@ -162,29 +167,32 @@
   </div>
 
   <!-- Private area (Gapyear route) -->
-  <div class="lock" role="dialog" aria-modal="true" aria-label="Code eingeben" data-lock-modal hidden>
+  <div class="lock" role="dialog" aria-modal="true" aria-label="Code eingeben" data-i18n-aria="lockDialog" data-lock-modal hidden>
     <div class="lock__box">
       <svg class="lock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>
       <p class="lock__title">Gap<em>year</em></p>
       <div class="lock__code" data-lock-code>
-        <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4" aria-label="Vierstelliger Code" data-lock-input>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4" aria-label="Vierstelliger Code" data-i18n-aria="lockInput" data-lock-input>
         <span></span><span></span><span></span><span></span>
       </div>
       <p class="lock__hint" data-lock-hint aria-live="polite"></p>
-      <button type="button" class="lock__cancel" data-lock-close>Abbrechen</button>
+      <button type="button" class="lock__cancel" data-lock-close data-i18n="cancel">Abbrechen</button>
     </div>
   </div>
 
   <div class="cursor" aria-hidden="true">
+    <div class="cursor__lens"></div>
     <div class="cursor__blob"></div>
     <span class="cursor__label" data-cursor-label></span>
   </div>
 
-  <noscript><p class="noscript">This portfolio needs JavaScript to show the pictures.</p></noscript>
+  <noscript><p class="noscript">Dieses Portfolio braucht JavaScript, um die Bilder zu zeigen. — This portfolio needs JavaScript to show the pictures.</p></noscript>
 
-  <script src="assets/js/content.js?v=6"></script>
-  <script src="assets/js/warp.js?v=3"></script>
-  <script src="assets/js/main.js?v=10"></script>
-  <script src="assets/js/lock.js?v=1"></script>
+  <script src="assets/js/content.js?v=7"></script>
+  <script src="assets/js/i18n.js?v=1"></script>
+  <script src="assets/js/lite.js?v=1"></script>
+  <script src="assets/js/warp.js?v=4"></script>
+  <script src="assets/js/main.js?v=11"></script>
+  <script src="assets/js/lock.js?v=2"></script>
 </body>
 </html>

@@ -12,6 +12,14 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
+  // iPads report a fine pointer when a trackpad is attached, but scroll like a phone
+  const touchScroll = !finePointer || (isApple && navigator.maxTouchPoints > 0);
+  const root = document.documentElement;
+  const I = window.LKI18N || { t: (k) => k, tx: (v) => v, onChange() {} };
+  const tr = I.t;
+  const tx = I.tx;
+  const Lite = window.LKLite || { on: () => false, onChange() {} };
   const pad = (n, l = 2) => String(n).padStart(l, "0");
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -343,35 +351,35 @@
   $("[data-name]").textContent = fullName;
   $("[data-first]").textContent = P.name[0];
   $("[data-last]").textContent = P.name[1];
-  $("[data-role]").textContent = P.role || "";
   const years = photos.map((p) => +p.year).filter(Boolean);
   $("[data-coords]").textContent =
     P.coords || (years.length ? `${Math.min(...years)} — ${Math.max(...years)}` : "");
-  $("[data-photo-count]").textContent = `${pad(photos.length)} Frames`;
-
-  $("[data-about]").innerHTML = (P.about?.body || []).map((t) => `<p>${esc(t)}</p>`).join("");
-
-  const contactBlock = {
-    label: "Contact",
-    html: [`<li><a href="mailto:${esc(P.email)}">${esc(P.email)}</a></li>`]
-      .concat((P.links || []).map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a></li>`))
-      .join(""),
-  };
-  $("[data-details]").innerHTML =
-    (P.about?.details || [])
-      .map((d) => `<div><h3>${esc(d.label)}</h3><ul>${d.items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`)
-      .join("") + `<div><h3>${contactBlock.label}</h3><ul>${contactBlock.html}</ul></div>`;
 
   // Social links go in front of the static Impressum / Datenschutz links
   $("[data-links]").insertAdjacentHTML("afterbegin", (P.links || [])
-    .map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`)
+    .map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(tx(l.label))}</a>`)
     .join(""));
 
   const mail = $("[data-mail]");
   mail.href = `mailto:${P.email}`;
-  mail.dataset.cursor = "Write";
-  const chunk = `<span>Say hello —</span><span><i>${esc(P.email)}</i> —</span>`;
-  $("[data-marquee]").innerHTML = chunk.repeat(4);
+
+  // everything that depends on the language; runs again when it is switched
+  function renderText() {
+    $("[data-role]").textContent = tx(P.role) || "";
+    $("[data-photo-count]").textContent = tr("frames", { n: pad(photos.length) });
+    $("[data-about]").innerHTML = (P.about?.body || []).map((t) => `<p>${esc(tx(t))}</p>`).join("");
+    const contact = [`<li><a href="mailto:${esc(P.email)}">${esc(P.email)}</a></li>`]
+      .concat((P.links || []).map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(tx(l.label))} ↗</a></li>`))
+      .join("");
+    $("[data-details]").innerHTML =
+      (P.about?.details || [])
+        .map((d) => `<div><h3>${esc(tx(d.label))}</h3><ul>${d.items.map((x) => `<li>${esc(tx(x))}</li>`).join("")}</ul></div>`)
+        .join("") + `<div><h3>${esc(tr("contact"))}</h3><ul>${contact}</ul></div>`;
+    mail.dataset.cursor = tr("write");
+    const chunk = `<span>${esc(tr("sayHello"))}</span><span><i>${esc(P.email)}</i> —</span>`;
+    $("[data-marquee]").innerHTML = chunk.repeat(4);
+  }
+  renderText();
 
   /* Clock */
   const clockEl = $("[data-clock]");
@@ -382,8 +390,9 @@
   })();
   const tick = () => {
     const t = fmt.format(new Date());
-    clockEl.textContent = `${P.location || "Local"} ${t}`;
-    locEl.textContent = `${P.location || "Local time"}, ${t.slice(0, 5)}`;
+    const place = tx(P.location) || tr("local");
+    clockEl.textContent = `${place} ${t}`;
+    locEl.textContent = `${place}, ${t.slice(0, 5)}`;
   };
   tick();
   setInterval(tick, 1000);
@@ -392,7 +401,7 @@
   const themeLabel = $("[data-theme-label]");
   const applyThemeLabel = () => {
     const light = document.documentElement.dataset.theme === "light";
-    themeLabel.textContent = light ? "Darkroom" : "Light table";
+    themeLabel.textContent = tr(light ? "darkroom" : "lightTable");
     $('meta[name="theme-color"]').content = light ? "#ebe5d9" : "#0d0c0a";
   };
   applyThemeLabel();
@@ -418,7 +427,7 @@
   let heroFront = 0;
   let heroTimer;
 
-  ticks.innerHTML = heroSet.map((p, i) => `<button type="button" class="hero__tick" data-tick="${i}" aria-label="Show ${esc(p.title)}"></button>`).join("");
+  ticks.innerHTML = heroSet.map((p, i) => `<button type="button" class="hero__tick" data-tick="${i}" aria-label="${esc(tr("show", { t: p.title }))}"></button>`).join("");
   ticks.style.setProperty("--dur", `${HERO_MS}ms`);
   const tickEls = $$("[data-tick]", ticks);
 
@@ -464,14 +473,17 @@
   });
   heroBg.addEventListener("click", () => openLightbox(photos, photos.indexOf(heroSet[heroIdx])));
 
-  // scrolling away: the photograph lags behind and dims
+  // scrolling away: the photograph lags behind and dims. Touch screens
+  // scroll on a separate thread, so a position set from JS would trail
+  // behind the finger; there the CSS does it with a scroll timeline.
   if (!reduceMotion) {
     let ticking = false;
     const onScroll = () => {
       ticking = false;
       const h = hero.offsetHeight;
       const y = Math.min(scrollY, h);
-      heroBg.style.setProperty("--py", `${(y * 0.35).toFixed(1)}px`);
+      const lag = !touchScroll && !Lite.on();
+      heroBg.style.setProperty("--py", lag ? `${(y * 0.35).toFixed(1)}px` : "0px");
       heroBg.style.setProperty("--dim", (0.12 + (y / h) * 0.6).toFixed(3));
     };
     addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
@@ -484,7 +496,7 @@
   grid.innerHTML = photos
     .map((p, i) => `
       <figure class="ph" style="--r:${p.ratio}">
-        <button class="ph__btn" type="button" data-open="${i}" data-cursor="View" aria-label="Open ${esc(p.title)}">
+        <button class="ph__btn" type="button" data-open="${i}" data-cursor="${esc(tr("view"))}" aria-label="${esc(tr("open", { t: p.title }))}">
           <div class="ph__frame">
             <img alt="${esc(p.where ? `${p.title}, ${p.where}` : p.title)}">
           </div>
@@ -606,14 +618,14 @@
       const card = `
         <article class="film-card">
           <div>
-            <span class="film-card__no">Reel ${pad(fi + 1)} / ${pad(films.length)}</span>
+            <span class="film-card__no">${tr("reel")} ${pad(fi + 1)} / ${pad(films.length)}</span>
             <h3 class="film-card__title">${esc(f.title)}</h3>
             ${f.note ? `<p class="film-card__note">${esc(f.note)}</p>` : ""}
           </div>
           <dl>
-            ${[["Type", f.kind], ["Year", f.year], ["Runtime", f.runtime], ["Role", f.role], ["Camera", f.stock], ["Aspect", f.aspect ? `${f.aspect} : 1` : ""]]
+            ${[["filmType", f.kind], ["filmYear", f.year], ["filmRuntime", f.runtime], ["filmRole", f.role], ["filmCamera", f.stock], ["filmAspect", f.aspect ? `${f.aspect} : 1` : ""]]
               .filter(([, v]) => v)
-              .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`)
+              .map(([k, v]) => `<dt>${tr(k)}</dt><dd>${esc(tx(v))}</dd>`)
               .join("")}
           </dl>
         </article>`;
@@ -621,9 +633,9 @@
         .map((s, si) => {
           const idx = stillIdx++;
           return `
-          <button class="still" type="button" data-still="${idx}" data-reel-no="${fi}" data-cursor="View" style="--ar:${f.ratio}" aria-label="Open still from ${esc(f.title)}">
+          <button class="still" type="button" data-still="${idx}" data-reel-no="${fi}" data-cursor="${esc(tr("view"))}" style="--ar:${f.ratio}" aria-label="${esc(tr("openStill", { t: f.title }))}">
             <div class="still__frame">
-              <img alt="Still from ${esc(f.title)}${s.subtitle ? `: ${esc(s.subtitle)}` : ""}" loading="lazy">
+              <img alt="${esc(tr("stillFrom", { t: f.title }))}${s.subtitle ? `: ${esc(s.subtitle)}` : ""}" loading="lazy">
               ${s.timecode ? `<span class="still__tc">${esc(s.timecode)}</span>` : ""}
               ${s.subtitle ? `<span class="still__sub">${esc(s.subtitle)}</span>` : ""}
             </div>
@@ -657,7 +669,7 @@
 
   function measureStills() {
     if (!stillsSec.isConnected) return;
-    pinned = !reduceMotion && innerWidth > 760;
+    pinned = !reduceMotion && !Lite.on() && innerWidth > 760;
     stillsSec.classList.toggle("is-native", !pinned);
     if (!pinned) {
       stillsSec.style.height = "";
@@ -678,7 +690,7 @@
     // which reel is in view
     let current = 0;
     filmCards.forEach((c, i) => { if (c.offsetLeft - prog * travel < innerWidth * 0.6) current = i; });
-    reelEl.textContent = `Reel ${pad(current + 1)} — ${films[current]?.title || ""}`;
+    reelEl.textContent = `${tr("reel")} ${pad(current + 1)} — ${films[current]?.title || ""}`;
   }
 
   $(".stills__viewport", stillsSec).addEventListener("scroll", (e) => {
@@ -709,13 +721,16 @@
   /* ------------------------------------------------------------------------
      Smooth scrolling. macOS already scrolls with inertia; on Windows/Linux a
      mouse wheel jumps in steps, so we glide towards the target ourselves.
-     This loop is registered before the WebGL warp loop on purpose: it moves the
-     page first, the warp then reads the new position in the same frame.
+     applyEffects() starts this loop before the WebGL warp loop on purpose: it
+     moves the page first, the warp then reads the new position in the same
+     frame. Every effect below can be stopped again (lite version).
      ------------------------------------------------------------------------ */
-  const isApple = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
-  if (finePointer && !reduceMotion && !isApple) {
-    const root = document.documentElement;
-    let cur = scrollY, tgt = scrollY, applied = scrollY, last = performance.now();
+  let stopGlide = null;
+  function startGlide() {
+    if (stopGlide || !finePointer || reduceMotion || isApple) return;
+    const ac = new AbortController();
+    const on = { passive: true, signal: ac.signal };
+    let cur = scrollY, tgt = scrollY, applied = scrollY, last = performance.now(), raf = 0;
     const maxY = () => Math.max(0, root.scrollHeight - innerHeight);
 
     addEventListener("wheel", (e) => {
@@ -724,31 +739,36 @@
       const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? innerHeight : 1;
       e.preventDefault();
       tgt = Math.min(maxY(), Math.max(0, tgt + e.deltaY * unit));
-    }, { passive: false });
+    }, { passive: false, signal: ac.signal });
 
     // scrolled by something else (keyboard, scrollbar, anchor link): follow it
     addEventListener("scroll", () => {
       if (Math.abs(scrollY - applied) > 2) cur = tgt = applied = scrollY;
-    }, { passive: true });
+    }, on);
 
     const glide = (now) => {
       const dt = Math.min(64, now - last);
       last = now;
-      if (cur !== tgt) {
+      if (cur !== tgt && dt > 0) {
         cur += (tgt - cur) * (1 - Math.pow(1 - 0.085, dt / 16.67));
         if (Math.abs(tgt - cur) < 0.3) cur = tgt;
         scrollTo({ top: cur, behavior: "instant" });
         applied = scrollY;
       }
-      requestAnimationFrame(glide);
+      raf = requestAnimationFrame(glide);
     };
-    requestAnimationFrame(glide);
+    raf = requestAnimationFrame(glide);
+    stopGlide = () => { ac.abort(); cancelAnimationFrame(raf); stopGlide = null; };
   }
 
-  /* Scroll warp (WebGL) */
-  if (!reduceMotion && window.LKWarp) {
+  /* Scroll warp (WebGL). Not on touch screens: they scroll on their own
+     thread, and photos drawn from JS into a fixed canvas would trail behind
+     the page in jumps. There the CSS gives each photo a scroll-linked drift. */
+  let warp = null;
+  function startWarp() {
+    if (warp || reduceMotion || touchScroll || !window.LKWarp) return;
     try {
-      window.LKWarp({
+      warp = window.LKWarp({
         items: figs.map((fig, i) => ({
           i, fig,
           frame: $(".ph__frame", fig),
@@ -758,8 +778,13 @@
         hovered: () => hoveredIdx,
       });
     } catch (e) {
-      document.documentElement.classList.remove("gl-on");
+      warp = null;
+      root.classList.remove("gl-on");
     }
+  }
+  function stopWarp() {
+    warp?.destroy?.();
+    warp = null;
   }
 
   /* ------------------------------------------------------------------------
@@ -785,7 +810,7 @@
       if (lbImg.src === src) return done();
       lbImg.onload = done;
       lbImg.src = src;
-      lbImg.alt = it.subtitle ? `Still from ${it.title}` : it.where ? `${it.title}, ${it.where}` : it.title;
+      lbImg.alt = it.film ? tr("stillFrom", { t: it.title }) : it.where ? `${it.title}, ${it.where}` : it.title;
     });
     // preload neighbours
     [1, -1].forEach((d) => lbList[(lbIdx + d + lbList.length) % lbList.length]?.src$());
@@ -803,7 +828,7 @@
   function closeLightbox() {
     lb.classList.remove("is-open");
     document.documentElement.classList.remove("lb-open");
-    setTimeout(() => { lb.hidden = true; }, 450);
+    setTimeout(() => { lb.hidden = true; refreshCursor(); }, 450);
     lastFocus?.focus?.({ preventScroll: true });
   }
   const step = (d) => { lbIdx = (lbIdx + d + lbList.length) % lbList.length; renderLb(); };
@@ -834,31 +859,50 @@
   });
 
   /* ------------------------------------------------------------------------
-     Custom cursor
+     Custom cursor. Two layers that move together:
+     - the lens (below) bends the backdrop through an SVG filter (Chromium)
+       and carries the glass shading,
+     - the blob (above) is a white disc blended with "difference": it inverts
+       whatever is underneath. Blending works everywhere and costs almost
+       nothing, so the inverted look stays even where the backdrop filter is
+       too heavy or fails to draw.
      ------------------------------------------------------------------------ */
-  if (finePointer) {
+  let stopCursor = null;
+  let refreshCursor = () => {};
+  let lensBuilt = false;
+  function startCursor() {
+    if (stopCursor || !finePointer) return;
     const cur = $(".cursor");
     const blob = $(".cursor__blob");
+    const lens = $(".cursor__lens");
     const label = $("[data-cursor-label]");
-    document.documentElement.classList.add("has-cursor");
+    const ac = new AbortController();
+    const on = { passive: true, signal: ac.signal };
+    root.classList.add("has-cursor");
 
     // Chromium can run an SVG filter on the backdrop: real refraction.
     const chromium = !!(navigator.userAgentData?.brands || []).some((b) => /Chromium|Google Chrome|Microsoft Edge/.test(b.brand));
     if (chromium) {
-      buildLensFilter();
-      document.documentElement.classList.add("has-lg");
+      if (!lensBuilt) { buildLensFilter(); lensBuilt = true; }
+      root.classList.add("has-lg");
     }
 
     // The blob element is 100px; every size below is scaled by SIZE (20% smaller).
     const SIZE = 0.8;
     const SIZES = { dot: 0.1 * SIZE, link: 0.36 * SIZE, label: 1 * SIZE };
-    let x = innerWidth / 2, y = innerHeight / 2, cx = x, cy = y;
+    let x = innerWidth / 2, y = innerHeight / 2, cx = x, cy = y, seen = false;
     let scale = SIZES.dot, target = SIZES.dot, press = 1, stretch = 0, angle = 0;
-    let lastSY = scrollY, scrollV = 0, lastProbe = 0, last = performance.now();
-    addEventListener("pointermove", (e) => { x = e.clientX; y = e.clientY; cur.classList.remove("is-hidden"); }, { passive: true });
-    addEventListener("pointerdown", () => { press = 0.82; });
-    addEventListener("pointerup", () => { press = 1; });
-    document.addEventListener("pointerleave", () => cur.classList.add("is-hidden"));
+    let lastSY = scrollY, scrollV = 0, lastProbe = 0, last = performance.now(), raf = 0;
+    const show = () => cur.classList.remove("is-hidden");
+    addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch") return;
+      x = e.clientX; y = e.clientY;
+      if (!seen) { seen = true; cx = x; cy = y; }
+      show();
+    }, on);
+    addEventListener("pointerdown", () => { press = 0.82; show(); }, on);
+    addEventListener("pointerup", () => { press = 1; }, on);
+    document.addEventListener("pointerleave", () => cur.classList.add("is-hidden"), on);
 
     const setHover = (el) => {
       const t = el?.closest?.("[data-cursor]");
@@ -868,12 +912,19 @@
       target = t ? SIZES.label : link ? SIZES.link : SIZES.dot;
       if (t) label.textContent = t.dataset.cursor;
     };
+    document.addEventListener("pointerover", (e) => { show(); setHover(e.target); }, on);
+    // something opened or closed under a still pointer (e.g. the lightbox)
+    refreshCursor = () => { if (seen) setHover(document.elementFromPoint(x, y)); };
 
     // time based easing, so it feels the same on 60, 120 and 144 Hz screens
     const k = (rate, dt) => 1 - Math.pow(1 - rate, dt / 16.67);
 
     const loop = (now) => {
+      raf = requestAnimationFrame(loop);
       const dt = Math.min(64, now - last);
+      // two callbacks with the same timestamp would divide by zero below and
+      // leave NaN in the state for good: the bubble would freeze in place
+      if (!(dt > 0)) return;
       last = now;
       const px = cx, py = cy;
       cx += (x - cx) * k(0.15, dt); cy += (y - cy) * k(0.15, dt);
@@ -894,19 +945,31 @@
       stretch += (Math.min(speed / 45, 0.38) - stretch) * k(0.14, dt);
       if (speed > 0.4) angle = Math.atan2(vy, vx);
       scale += (target * press - scale) * k(0.14, dt);
-      blob.style.transform = `translate3d(${cx}px, ${cy}px, 0) rotate(${angle}rad) scale(${scale * (1 + stretch)}, ${scale * (1 - stretch * 0.55)})`;
+      // safety net: never let a bad value stick
+      if (![cx, cy, scrollV, stretch, angle, scale].every(Number.isFinite)) {
+        cx = x; cy = y; scrollV = 0; stretch = 0; angle = 0; scale = target;
+      }
+      const tf = `translate3d(${cx}px, ${cy}px, 0) rotate(${angle}rad) scale(${scale * (1 + stretch)}, ${scale * (1 - stretch * 0.55)})`;
+      blob.style.transform = tf;
+      lens.style.transform = tf;
       label.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
-      requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    raf = requestAnimationFrame(loop);
 
-    document.addEventListener("pointerover", (e) => setHover(e.target));
+    stopCursor = () => {
+      ac.abort();
+      cancelAnimationFrame(raf);
+      root.classList.remove("has-cursor", "has-lg");
+      cur.classList.remove("is-label", "is-link");
+      refreshCursor = () => {};
+      stopCursor = null;
+    };
   }
 
   /* SVG filter for the lens: a generated displacement map bends the backdrop
      towards the centre (magnifies) and much harder at the rim (refraction);
-     each colour channel bends a little differently (dispersion), then the
-     result is inverted. */
+     each colour channel bends a little differently (dispersion). The
+     inversion comes from the blob layered on top. */
   function buildLensFilter() {
     const S = 100, SCALE = 90;
     const c = document.createElement("canvas");
@@ -949,11 +1012,39 @@
         ${channel("g", "0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0", SCALE)}
         ${channel("b", "0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0", SCALE + 6)}
         <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg"/>
-        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb"/>
-        <feColorMatrix in="rgb" type="matrix" values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0"/>
+        <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1"/>
       </filter>`;
     document.body.appendChild(svg);
   }
+
+  /* ------------------------------------------------------------------------
+     Effects on/off (lite version, see lite.js) and language switch
+     ------------------------------------------------------------------------ */
+  function applyEffects() {
+    if (Lite.on()) {
+      stopWarp(); stopGlide?.(); stopCursor?.();
+    } else {
+      startGlide(); startWarp(); startCursor();
+    }
+    dispatchEvent(new Event("scroll")); // hero parallax picks up the change
+    measureStills();
+  }
+  applyEffects();
+  Lite.onChange(applyEffects);
+
+  I.onChange(() => {
+    renderText();
+    applyThemeLabel();
+    tick();
+    $$("[data-open]", grid).forEach((b) => {
+      b.dataset.cursor = tr("view");
+      b.setAttribute("aria-label", tr("open", { t: photos[+b.dataset.open].title }));
+    });
+    tickEls.forEach((b, i) => b.setAttribute("aria-label", tr("show", { t: heroSet[i].title })));
+    $$("[data-still]", track).forEach((b) => { b.dataset.cursor = tr("view"); });
+    if (pinned) updateStills();
+    refreshCursor();
+  });
 
   /* ------------------------------------------------------------------------
      Intro

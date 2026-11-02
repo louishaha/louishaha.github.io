@@ -15,6 +15,16 @@ Felder: `title`, `place`, `year`, `camera` (leer lassen = wird nicht angezeigt),
 
 `size` ist nur ein Richtwert: Jedes Bild bekommt etwas Zufall dazu, und wie groß es am Ende wird, hängt auch davon ab, mit welchen Bildern es in einer Reihe landet. Die Anordnung steuert `shuffle` in `content.js`: `true` = bei jedem Besuch neu gemischt, eine Zahl = feste zufällige Anordnung (andere Zahl = andere Anordnung), `false` = Reihenfolge wie in der Liste.
 
+### Deutsch / Englisch
+Texte in `content.js` können zweisprachig sein: `{ de: "…", en: "…" }`. Ein einfacher Text ohne Klammern gilt für beide Sprachen (z.B. die Fototitel). Alle festen Texte der Seite (Navigation, Buttons, Lightbox …) stehen in `assets/js/i18n.js`.
+
+Wer die Seite sieht: Deutsch, wenn der Browser auf Deutsch steht oder das Gerät in deutscher, österreichischer oder Schweizer Zeitzone läuft, sonst Englisch. Oben in der Navigation lässt sich mit **DE / EN** umschalten, die Wahl wird gemerkt. Impressum und Datenschutz bleiben deutsch.
+
+### Leichte Version
+Für schwächere Geräte gibt es eine leichte Version ohne WebGL-Verzerrung, Glas-Cursor, animiertes Korn, Unschärfe und Einblend-Animationen (`assets/js/lite.js`, Regeln unter `.lite` in `style.css`). Wirkt ein Gerät langsam (wenig Kerne/Arbeitsspeicher, keine Grafikkarte oder die Seite ruckelt in den ersten Sekunden messbar), wird einmal unten eingeblendet gefragt, ob man wechseln will. Die Antwort wird gemerkt; im Footer lässt sich die leichte Version jederzeit an- und ausschalten.
+
+Auf Handys und Tablets läuft die WebGL-Verzerrung nie, weil sie dort dem Scrollen hinterherruckelt. Stattdessen wandern die Fotos beim Scrollen leicht in ihrem Rahmen (reines CSS, läuft flüssig mit dem Finger mit).
+
 ### Filmstills
 Die Liste `films` ist leer, deshalb ist der Bereich „Film Stills“ ausgeblendet. Sobald dort ein Film mit Stills steht, erscheint er automatisch (Beispiel im Kommentar in `content.js`).
 

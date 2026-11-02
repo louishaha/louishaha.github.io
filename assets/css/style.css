@@ -153,11 +153,21 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   transition: transform 0.6s var(--ease);
 }
 :root[data-theme="light"] .nav__theme-dot { transform: rotate(180deg); }
+.nav__lang { display: inline-flex; gap: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+.nav__lang span { opacity: 0.45; transition: opacity 0.3s var(--ease); }
+.nav__lang span.is-on, .nav__lang:hover span:not([aria-hidden]) { opacity: 1; }
+.nav__lang span[aria-hidden] { opacity: 0.3; }
 
+.nav__name { white-space: nowrap; }
 @media (max-width: 760px) {
   .nav { grid-template-columns: 1fr auto; }
   .nav__links { display: none; }
   .nav__clock { display: none; }
+}
+/* very narrow phones: the theme switch keeps only its dot */
+@media (max-width: 370px) {
+  .nav__theme [data-theme-label] { display: none; }
+  .nav__theme { padding: 4px; margin: -4px; }
 }
 
 /* Hero -------------------------------------------------------------------
@@ -200,6 +210,17 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
   to { scale: 1.02; }
 }
 @media (prefers-reduced-motion: reduce) { .hero__bg img.is-front { animation: none; } }
+/* touch screens: the photograph lags behind on the scroll itself (see main.js) */
+@supports (animation-timeline: scroll()) {
+  @media (hover: none) and (prefers-reduced-motion: no-preference) {
+    :root:not(.lite) .hero__bg {
+      animation: hero-lag linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100svh;
+    }
+  }
+}
+@keyframes hero-lag { to { translate: 0 35svh; } }
 /* keeps the type and the small print readable on any photograph */
 .hero__shade {
   position: absolute; inset: 0; z-index: 3;
@@ -378,6 +399,24 @@ html:not(.js) .loader, .loader.is-skipped { display: none; }
 .gl-on .ph__frame img { visibility: hidden; }
 canvas.gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
 
+/* Without WebGL (touch screens, see main.js) each photo drifts a little inside
+   its frame while it passes through the screen. The browser runs this on the
+   scroll itself, so it stays smooth while swiping. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not(.gl-on):not(.lite) .ph__frame img {
+      position: absolute; left: 0; top: -8%;
+      height: 116%;
+      animation: ph-drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+@keyframes ph-drift {
+  from { translate: 0 -6%; }
+  to { translate: 0 6%; }
+}
+
 /* captions: liquid-glass pills on the image */
 .ph__cap {
   position: absolute;
@@ -420,7 +459,7 @@ canvas.gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; p
 @container (max-width: 170px) { .ph__title { display: none; } }
 
 @media (hover: hover) {
-  .grid:has(.ph__btn:hover) .ph:not(:has(.ph__btn:hover)) { opacity: 0.4; }
+  :root:not(.lite) .grid:has(.ph__btn:hover) .ph:not(:has(.ph__btn:hover)) { opacity: 0.4; }
 }
 @media (hover: none) {
   .ph__cap { opacity: 1; transform: none; }
@@ -681,8 +720,10 @@ canvas.gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; p
   color: var(--muted);
 }
 .footer__row > :last-child { justify-self: end; }
-.footer__links { display: flex; gap: 24px; }
+.footer__links { display: flex; flex-wrap: wrap; gap: 6px 24px; }
 .footer a { position: relative; color: var(--fg); }
+.footer__lite { text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); transition: color 0.3s var(--ease); }
+.footer__lite:hover, .footer__lite[aria-pressed="true"] { color: var(--fg); }
 @media (max-width: 760px) {
   .footer__row { grid-template-columns: 1fr 1fr; }
   .footer__links { grid-column: 1 / 3; order: -1; }
@@ -723,40 +764,45 @@ canvas.gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; p
 
 /* Cursor -----------------------------------------------------------------
    Small inverting dot; over images it turns into a liquid-glass lens that
-   refracts and inverts what is underneath and stretches with speed.      */
-/* .cursor has no box of its own (display: contents): blob and label must be
-   top-level layers, otherwise blending and backdrop-filter only see an
-   empty, isolated group instead of the page. */
+   refracts and inverts what is underneath and stretches with speed.
+   Two layers move together (main.js): the lens bends the backdrop and
+   carries the glass shading, the blob on top inverts by blending. The
+   inversion therefore never depends on backdrop-filter, which some
+   (weaker) GPUs skip or stop drawing.                                    */
+/* .cursor has no box of its own (display: contents): blob, lens and label
+   must be top-level layers, otherwise blending and backdrop-filter only see
+   an empty, isolated group instead of the page. */
 .cursor { display: none; }
 .has-cursor .cursor { display: contents; }
 .has-cursor, .has-cursor * { cursor: none !important; }
-.cursor__blob {
+.cursor__blob,
+.cursor__lens {
   position: fixed;
   left: 0; top: 0; z-index: 450;
   width: 100px; height: 100px;
   margin: -50px 0 0 -50px;
   border-radius: 50%;
   pointer-events: none;
-  background: #fff;
-  mix-blend-mode: difference;
   transform: scale(0.1);
   will-change: transform;
-  transition: background-color 0.35s var(--ease), box-shadow 0.35s var(--ease), opacity 0.3s;
+  transition: opacity 0.3s;
 }
-.cursor.is-hidden > * { opacity: 0; }
-.cursor.is-label .cursor__blob {
-  background: rgba(255, 255, 255, 0.02);
-  mix-blend-mode: normal;
-  -webkit-backdrop-filter: invert(1) saturate(1.3) contrast(1.05);
-  backdrop-filter: invert(1) saturate(1.3) contrast(1.05);
+.cursor__blob { background: #fff; mix-blend-mode: difference; }
+.cursor__lens { z-index: 449; opacity: 0; }
+.cursor.is-hidden > * { opacity: 0 !important; }
+.cursor.is-label .cursor__lens {
+  opacity: 1;
+  -webkit-backdrop-filter: saturate(1.3) contrast(1.05);
+  backdrop-filter: saturate(1.3) contrast(1.05);
+  /* the blob inverts these too: dark here reads as light on screen */
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
-    inset 3px 4px 8px rgba(255, 255, 255, 0.45),
-    inset -4px -6px 12px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    inset 3px 4px 8px rgba(0, 0, 0, 0.45),
+    inset -4px -6px 12px rgba(255, 255, 255, 0.28),
     0 14px 34px rgba(0, 0, 0, 0.3);
 }
 /* Chromium can refract through an SVG filter (#lg, built in main.js) */
-.has-lg .cursor.is-label .cursor__blob { backdrop-filter: url(#lg) saturate(1.25); }
+.has-lg .cursor.is-label .cursor__lens { -webkit-backdrop-filter: url(#lg) saturate(1.25); backdrop-filter: url(#lg) saturate(1.25); }
 .cursor__label {
   position: fixed;
   left: 0; top: 0; z-index: 451;
@@ -820,3 +866,49 @@ canvas.gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; p
 .lock__hint { min-height: 1.5em; margin: 0; color: var(--muted); }
 .lock__cancel { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .lock__cancel:hover { color: var(--fg); }
+
+/* Lite version: asked for on slow devices (lite.js) ----------------------- */
+.lite-ask {
+  position: fixed; z-index: 420;
+  left: 50%; bottom: max(var(--gutter), env(safe-area-inset-bottom));
+  width: min(440px, calc(100vw - 2 * var(--gutter)));
+  display: grid; gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--fg); color: var(--bg);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  transition: opacity 0.45s var(--ease), transform 0.6s var(--ease);
+}
+.lite-ask.is-in { opacity: 1; transform: translate(-50%, 0); }
+.lite-ask__text { margin: 0; font-family: var(--serif); font-size: 1.3rem; line-height: 1.2; }
+.lite-ask__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.lite-ask button {
+  padding: 8px 14px 7px; border-radius: 99px;
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.lite-ask__yes { background: var(--bg); color: var(--fg); border-color: var(--bg) !important; }
+@media (max-width: 760px) {
+  .lite-ask { padding: 14px; gap: 12px; }
+  .lite-ask__text { font-size: 1.1rem; }
+}
+
+/* What the lite version leaves out: WebGL and the glass cursor are switched
+   off in main.js; here go the moving grain, blur, focus pulls and reveals. */
+.lite body::before, .lite .lb::before, .lite .loader::before { display: none; }
+.lite body { transition: none; }
+.lite .hero__bg img { translate: none; }
+.lite .hero__bg img.is-front { animation: lite-fade 0.8s ease both; }
+@keyframes lite-fade { from { opacity: 0; } }
+.lite .ph .ph__frame { clip-path: none; transition: none; }
+.lite .ph__frame img,
+.lite .ph.is-in .ph__frame img,
+.lite .ph.is-in .ph__btn:hover .ph__frame img { transform: none; transition: opacity 0.5s ease; }
+.lite .ph__cap { transition: opacity 0.2s; }
+.lite .glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(18, 16, 14, 0.62); box-shadow: none; }
+.lite .lock { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(13, 12, 10, 0.96); }
+:root.lite[data-theme="light"] .lock { background: rgba(235, 229, 217, 0.97); }
+.lite .still__frame img, .lite .lb__stage img { transition: opacity 0.3s; }
+.lite .marquee__track { animation-duration: 40s; }

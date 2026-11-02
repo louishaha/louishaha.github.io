@@ -60,7 +60,7 @@
       input.blur();
       location.href = target;
     } else {
-      hint.textContent = "Falscher Code.";
+      hint.textContent = window.LKI18N ? window.LKI18N.t("wrongCode") : "Falscher Code.";
       code.classList.add("is-wrong");
       setTimeout(() => { input.value = ""; paint(); }, 380);
     }

@@ -13,12 +13,15 @@
              bekommt etwas Zufall dazu, und wie groß es am Ende wird, hängt
              auch davon ab, mit welchen Bildern es in einer Reihe landet.
    Leere Felder (place, year, camera) werden einfach nicht angezeigt.
+
+   Texte auf Deutsch und Englisch: { de: "…", en: "…" }. Ein einfacher Text
+   ohne die Klammern gilt für beide Sprachen (z.B. die Fototitel).
    Die Reihenfolge hier spielt nur eine Rolle, wenn shuffle: false ist.
    ========================================================================== */
 
 window.PORTFOLIO = {
   name: ["Louis", "Koller"],
-  role: "Photography",
+  role: { de: "Fotografie", en: "Photography" },
   location: "",            // z.B. "Berlin" – erscheint neben der Uhrzeit
   timezone: "Europe/Berlin",
   email: "mail@louiskoller.cc",
@@ -28,12 +31,24 @@ window.PORTFOLIO = {
 
   about: {
     body: [
-      "Louis Koller is a photographer. His work moves between landscape, wildlife and the street, with a soft spot for bad weather and early mornings.",
-      "Available for commissions and collaborations.",
+      {
+        de: "Louis Koller ist Fotograf. Seine Bilder bewegen sich zwischen Landschaft, Wildtieren und der Straße, mit einer Schwäche für schlechtes Wetter und frühe Morgen.",
+        en: "Louis Koller is a photographer. His work moves between landscape, wildlife and the street, with a soft spot for bad weather and early mornings.",
+      },
+      {
+        de: "Offen für Aufträge und Zusammenarbeiten.",
+        en: "Available for commissions and collaborations.",
+      },
     ],
     details: [
-      { label: "Subjects", items: ["Landscape", "Wildlife", "City"] },
-      { label: "Equipment", items: ["Canon EOS 6D Mark II", "EF 24–70 mm f/2.8L II", "Tamron 70–200 mm f/2.8", "DJI Drone"] },
+      {
+        label: { de: "Motive", en: "Subjects" },
+        items: [{ de: "Landschaft", en: "Landscape" }, { de: "Wildtiere", en: "Wildlife" }, { de: "Stadt", en: "City" }],
+      },
+      {
+        label: { de: "Ausrüstung", en: "Equipment" },
+        items: ["Canon EOS 6D Mark II", "EF 24–70 mm f/2.8L II", "Tamron 70–200 mm f/2.8", { de: "DJI-Drohne", en: "DJI Drone" }],
+      },
     ],
   },
 

@@ -3,8 +3,8 @@
    of paper while you scroll (the faster, the stronger).
    The DOM <img> elements stay in place for layout, loading, clicks and
    screen readers; they are only hidden visually while WebGL is running.
-   Without WebGL (or with reduced motion) nothing happens and the plain
-   images are shown.
+   Without WebGL (or with reduced motion, on touch screens or in the lite
+   version) nothing happens and the plain images are shown.
    ========================================================================== */
 window.LKWarp = function LKWarp({ items, hovered }) {
 
@@ -170,7 +170,8 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     }
   }
   readTile();
-  new MutationObserver(readTile).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const themeObs = new MutationObserver(readTile);
+  themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   let W = 0, H = 0, dpr = 1;
   function resize() {
@@ -182,10 +183,11 @@ window.LKWarp = function LKWarp({ items, hovered }) {
   }
 
   /* ------------------------------------------------------------------- loop */
-  let lastY = scrollY, vel = 0, lastT = performance.now();
+  let lastY = scrollY, vel = 0, lastT = performance.now(), raf = 0, dead = false;
   const ease = (cur, target, k, dt) => cur + (target - cur) * (1 - Math.pow(1 - k, dt / 16.67));
 
   function frame(now) {
+    if (dead) return;
     const dt = Math.min(64, now - lastT);
     lastT = now;
     if (innerWidth !== W || innerHeight !== H) resize();
@@ -244,16 +246,22 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     raf = requestAnimationFrame(frame);
   }
 
-  canvas.addEventListener("webglcontextlost", (e) => {
-    e.preventDefault();
+  // stop drawing and hand the photos back to the DOM <img> elements
+  function destroy() {
+    if (dead) return;
+    dead = true;
     cancelAnimationFrame(raf);
+    themeObs.disconnect();
     document.documentElement.classList.remove("gl-on");
     canvas.remove();
-  });
+    planes.forEach((p) => p.tex && gl.deleteTexture(p.tex));
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+  }
+  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); destroy(); });
 
   document.body.prepend(canvas);
   resize();
   document.documentElement.classList.add("gl-on");
-  let raf = requestAnimationFrame(frame);
-  return { canvas };
+  raf = requestAnimationFrame(frame);
+  return { canvas, destroy };
 };
