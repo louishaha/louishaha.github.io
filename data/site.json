@@ -1,0 +1,772 @@
+{
+  "version": 1,
+  "rev": 1,
+  "updated": "2026-11-05T00:51:48.245Z",
+  "name": [
+    "Louis",
+    "Koller"
+  ],
+  "email": "mail@louiskoller.cc",
+  "timezone": "Europe/Berlin",
+  "gapyear": false,
+  "shuffle": true,
+  "facts": [
+    {
+      "label": {
+        "de": "Ausrüstung",
+        "en": "Equipment",
+        "zh": "器材"
+      },
+      "value": [
+        "Canon EOS 6D Mark II",
+        "EF 24–70 mm f/2.8L II",
+        "Tamron SP 70–200 mm f/2.8",
+        {
+          "de": "DJI-Drohne",
+          "en": "DJI drone",
+          "zh": "大疆无人机"
+        }
+      ]
+    },
+    {
+      "label": {
+        "de": "Themen",
+        "en": "Subjects",
+        "zh": "题材"
+      },
+      "value": [
+        {
+          "de": "Landschaft",
+          "en": "Landscape",
+          "zh": "风景"
+        },
+        {
+          "de": "Wildtiere",
+          "en": "Wildlife",
+          "zh": "野生动物"
+        },
+        {
+          "de": "Stadt",
+          "en": "City",
+          "zh": "城市"
+        }
+      ]
+    },
+    {
+      "label": {
+        "de": "Aufträge",
+        "en": "Commissions",
+        "zh": "约拍"
+      },
+      "value": [
+        {
+          "de": "Offen für Anfragen",
+          "en": "Open to requests",
+          "zh": "欢迎咨询"
+        }
+      ]
+    },
+    {
+      "label": {
+        "de": "Kontakt",
+        "en": "Contact",
+        "zh": "联系"
+      },
+      "value": [
+        {
+          "text": "mail@louiskoller.cc",
+          "url": "mailto:mail@louiskoller.cc"
+        }
+      ]
+    },
+    {
+      "label": {
+        "de": "Social",
+        "en": "Social",
+        "zh": "社交媒体"
+      },
+      "value": []
+    }
+  ],
+  "photos": [
+    {
+      "id": "into-the-fog",
+      "src": "images/photos/01-into-the-fog.jpg",
+      "thumb": "images/thumbs/01-into-the-fog.jpg",
+      "w": 6137,
+      "h": 3452,
+      "title": "Into the Fog",
+      "place": "",
+      "year": 2025,
+      "camera": "Canon EOS 6D Mark II",
+      "exposure": {},
+      "size": 3,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "two-strays",
+      "src": "images/photos/03-two-strays.jpg",
+      "thumb": "images/thumbs/03-two-strays.jpg",
+      "w": 5184,
+      "h": 3456,
+      "title": "Two Strays",
+      "place": "",
+      "year": 2018,
+      "camera": "Canon EOS 650D · EF-S 18–135 mm",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "victoria-harbour",
+      "src": "images/photos/04-victoria-harbour.jpg",
+      "thumb": "images/thumbs/04-victoria-harbour.jpg",
+      "w": 5991,
+      "h": 3994,
+      "title": "Victoria Harbour",
+      "place": {
+        "de": "Hongkong",
+        "en": "Hong Kong",
+        "zh": "香港"
+      },
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 2,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "breakwater",
+      "src": "images/photos/05-breakwater.jpg",
+      "thumb": "images/thumbs/05-breakwater.jpg",
+      "w": 4637,
+      "h": 2608,
+      "title": "Breakwater",
+      "place": "",
+      "year": 2025,
+      "camera": "Canon EOS 6D Mark II",
+      "exposure": {},
+      "size": 2,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "platform",
+      "src": "images/photos/06-platform.jpg",
+      "thumb": "images/thumbs/06-platform.jpg",
+      "w": 5083,
+      "h": 2859,
+      "title": "Platform",
+      "place": {
+        "de": "Hongkong",
+        "en": "Hong Kong",
+        "zh": "香港"
+      },
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "dusk-grass",
+      "src": "images/photos/07-dusk-grass.jpg",
+      "thumb": "images/thumbs/07-dusk-grass.jpg",
+      "w": 1333,
+      "h": 2000,
+      "title": "Dusk Grass",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "blue-ridges",
+      "src": "images/photos/08-blue-ridges.jpg",
+      "thumb": "images/thumbs/08-blue-ridges.jpg",
+      "w": 6034,
+      "h": 4023,
+      "title": "Blue Ridges",
+      "place": "",
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · Tamron SP 70–200 mm f/2.8",
+      "exposure": {},
+      "size": 1,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "victoria-peak",
+      "src": "images/photos/09-victoria-peak.jpg",
+      "thumb": "images/thumbs/09-victoria-peak.jpg",
+      "w": 4032,
+      "h": 2268,
+      "title": "Victoria Peak",
+      "place": {
+        "de": "Hongkong",
+        "en": "Hong Kong",
+        "zh": "香港"
+      },
+      "year": 2026,
+      "camera": "DJI Drone",
+      "exposure": {},
+      "size": 3,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "court-below",
+      "src": "images/photos/10-court-below.jpg",
+      "thumb": "images/thumbs/10-court-below.jpg",
+      "w": 1125,
+      "h": 2000,
+      "title": "Court Below",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "young-buck",
+      "src": "images/photos/11-young-buck.jpg",
+      "thumb": "images/thumbs/11-young-buck.jpg",
+      "w": 6042,
+      "h": 3399,
+      "title": "Young Buck",
+      "place": "",
+      "year": 2023,
+      "camera": "Canon EOS 6D Mark II · Tamron SP 70–200 mm f/2.8",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "two-lights",
+      "src": "images/photos/12-two-lights.jpg",
+      "thumb": "images/thumbs/12-two-lights.jpg",
+      "w": 6174,
+      "h": 4116,
+      "title": "Two Lights",
+      "place": "",
+      "year": 2024,
+      "camera": "Canon EOS 6D Mark II · Tamron SP 70–200 mm f/2.8",
+      "exposure": {},
+      "size": 1,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "mouflons",
+      "src": "images/photos/13-mouflons.jpg",
+      "thumb": "images/thumbs/13-mouflons.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Mouflons",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "above-the-clouds",
+      "src": "images/photos/14-above-the-clouds.jpg",
+      "thumb": "images/thumbs/14-above-the-clouds.jpg",
+      "w": 2179,
+      "h": 2179,
+      "title": "Above the Clouds",
+      "place": "",
+      "year": 2025,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "heart-stone",
+      "src": "images/photos/15-heart-stone.jpg",
+      "thumb": "images/thumbs/15-heart-stone.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Heart Stone",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "gull",
+      "src": "images/photos/16-gull.jpg",
+      "thumb": "images/thumbs/16-gull.jpg",
+      "w": 4760,
+      "h": 2678,
+      "title": "Gull",
+      "place": "",
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · Tamron SP 70–200 mm f/2.8",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "macau-tower",
+      "src": "images/photos/17-macau-tower.jpg",
+      "thumb": "images/thumbs/17-macau-tower.jpg",
+      "w": 5937,
+      "h": 3958,
+      "title": "Macau Tower",
+      "place": {
+        "de": "Macau",
+        "en": "Macau",
+        "zh": "澳门"
+      },
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "polar-bear",
+      "src": "images/photos/18-polar-bear.jpg",
+      "thumb": "images/thumbs/18-polar-bear.jpg",
+      "w": 3315,
+      "h": 4930,
+      "title": "Polar Bear",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "reeds",
+      "src": "images/photos/19-reeds.jpg",
+      "thumb": "images/thumbs/19-reeds.jpg",
+      "w": 2000,
+      "h": 1333,
+      "title": "Reeds",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "the-long-bridge",
+      "src": "images/photos/20-the-long-bridge.jpg",
+      "thumb": "images/thumbs/20-the-long-bridge.jpg",
+      "w": 5290,
+      "h": 2976,
+      "title": "The Long Bridge",
+      "place": {
+        "de": "Hongkong",
+        "en": "Hong Kong",
+        "zh": "香港"
+      },
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "valley-morning",
+      "src": "images/photos/21-valley-morning.jpg",
+      "thumb": "images/thumbs/21-valley-morning.jpg",
+      "w": 6232,
+      "h": 3506,
+      "title": "Valley Morning",
+      "place": "",
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 3,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "the-balcony",
+      "src": "images/photos/22-the-balcony.jpg",
+      "thumb": "images/thumbs/22-the-balcony.jpg",
+      "w": 1333,
+      "h": 2000,
+      "title": "The Balcony",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "green-tree-python",
+      "src": "images/photos/23-green-tree-python.jpg",
+      "thumb": "images/thumbs/23-green-tree-python.jpg",
+      "w": 5184,
+      "h": 3456,
+      "title": "Green Tree Python",
+      "place": "",
+      "year": 2017,
+      "camera": "Canon EOS 650D · EF-S 18–135 mm",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "haze-over-the-bay",
+      "src": "images/photos/24-haze-over-the-bay.jpg",
+      "thumb": "images/thumbs/24-haze-over-the-bay.jpg",
+      "w": 5615,
+      "h": 3158,
+      "title": "Haze over the Bay",
+      "place": {
+        "de": "Hongkong",
+        "en": "Hong Kong",
+        "zh": "香港"
+      },
+      "year": 2026,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "morning-road",
+      "src": "images/photos/25-morning-road.jpg",
+      "thumb": "images/thumbs/25-morning-road.jpg",
+      "w": 2000,
+      "h": 1333,
+      "title": "Morning Road",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 1,
+      "selected": true,
+      "hero": true
+    },
+    {
+      "id": "goldenrod",
+      "src": "images/photos/26-goldenrod.jpg",
+      "thumb": "images/thumbs/26-goldenrod.jpg",
+      "w": 4800,
+      "h": 3200,
+      "title": "Goldenrod",
+      "place": "",
+      "year": 2021,
+      "camera": "Canon EOS 650D · EF-S 18–135 mm",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "branches",
+      "src": "images/photos/27-branches.jpg",
+      "thumb": "images/thumbs/27-branches.jpg",
+      "w": 6240,
+      "h": 3510,
+      "title": "Branches",
+      "place": "",
+      "year": 2024,
+      "camera": "Canon EOS 6D Mark II · Tamron SP 70–200 mm f/2.8",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "siesta",
+      "src": "images/photos/28-siesta.jpg",
+      "thumb": "images/thumbs/28-siesta.jpg",
+      "w": 5515,
+      "h": 3102,
+      "title": "Siesta",
+      "place": "",
+      "year": 2024,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "crossing",
+      "src": "images/photos/29-crossing.jpg",
+      "thumb": "images/thumbs/29-crossing.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Crossing",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "cheeky",
+      "src": "images/photos/30-cheeky.jpg",
+      "thumb": "images/thumbs/30-cheeky.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Cheeky",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "gorge",
+      "src": "images/photos/31-gorge.jpg",
+      "thumb": "images/thumbs/31-gorge.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Gorge",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "reed-study",
+      "src": "images/photos/32-reed-study.jpg",
+      "thumb": "images/thumbs/32-reed-study.jpg",
+      "w": 2000,
+      "h": 1333,
+      "title": "Reed Study",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "summit",
+      "src": "images/photos/33-summit.jpg",
+      "thumb": "images/thumbs/33-summit.jpg",
+      "w": 2000,
+      "h": 1442,
+      "title": "Summit",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "hiding",
+      "src": "images/photos/34-hiding.jpg",
+      "thumb": "images/thumbs/34-hiding.jpg",
+      "w": 5184,
+      "h": 3456,
+      "title": "Hiding",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "asleep",
+      "src": "images/photos/35-asleep.jpg",
+      "thumb": "images/thumbs/35-asleep.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Asleep",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "green-study",
+      "src": "images/photos/36-green-study.jpg",
+      "thumb": "images/thumbs/36-green-study.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Green Study",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 1
+    },
+    {
+      "id": "last-light",
+      "src": "images/photos/37-last-light.jpg",
+      "thumb": "images/thumbs/37-last-light.jpg",
+      "w": 5543,
+      "h": 3118,
+      "title": "Last Light",
+      "place": "",
+      "year": 2024,
+      "camera": "Canon EOS 6D Mark II · EF 24–70 mm f/2.8L II",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "red-sun",
+      "src": "images/photos/38-red-sun.jpg",
+      "thumb": "images/thumbs/38-red-sun.jpg",
+      "w": 2000,
+      "h": 1500,
+      "title": "Red Sun",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 3,
+      "selected": true
+    },
+    {
+      "id": "after-the-rain",
+      "src": "images/photos/39-after-the-rain.jpg",
+      "thumb": "images/thumbs/39-after-the-rain.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "After the Rain",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "ledge",
+      "src": "images/photos/40-ledge.jpg",
+      "thumb": "images/thumbs/40-ledge.jpg",
+      "w": 2000,
+      "h": 1125,
+      "title": "Ledge",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    },
+    {
+      "id": "stag",
+      "src": "images/photos/41-stag.jpg",
+      "thumb": "images/thumbs/41-stag.jpg",
+      "w": 2000,
+      "h": 1333,
+      "title": "Stag",
+      "place": "",
+      "year": "",
+      "camera": "",
+      "exposure": {},
+      "size": 2
+    }
+  ],
+  "series": [
+    {
+      "id": "hongkong-macau",
+      "title": {
+        "de": "Hongkong & Macau",
+        "en": "Hong Kong & Macau",
+        "zh": "香港与澳门"
+      },
+      "text": {
+        "de": "",
+        "en": "",
+        "zh": ""
+      },
+      "year": "2026",
+      "cover": "victoria-peak",
+      "photos": [
+        "victoria-peak",
+        "victoria-harbour",
+        "platform",
+        "court-below",
+        "macau-tower",
+        "the-long-bridge",
+        "the-balcony",
+        "haze-over-the-bay"
+      ]
+    },
+    {
+      "id": "tiere",
+      "title": {
+        "de": "Tiere",
+        "en": "Animals",
+        "zh": "动物"
+      },
+      "text": {
+        "de": "",
+        "en": "",
+        "zh": ""
+      },
+      "year": "",
+      "cover": "polar-bear",
+      "photos": [
+        "polar-bear",
+        "stag",
+        "two-strays",
+        "young-buck",
+        "mouflons",
+        "gull",
+        "green-tree-python",
+        "goldenrod",
+        "siesta",
+        "cheeky",
+        "hiding",
+        "asleep",
+        "ledge"
+      ]
+    },
+    {
+      "id": "berge-nebel",
+      "title": {
+        "de": "Berge & Nebel",
+        "en": "Mountains & Fog",
+        "zh": "山与雾"
+      },
+      "text": {
+        "de": "",
+        "en": "",
+        "zh": ""
+      },
+      "year": "",
+      "cover": "into-the-fog",
+      "photos": [
+        "into-the-fog",
+        "valley-morning",
+        "breakwater",
+        "blue-ridges",
+        "above-the-clouds",
+        "morning-road",
+        "gorge",
+        "crossing",
+        "summit",
+        "two-lights"
+      ]
+    },
+    {
+      "id": "graeser-licht",
+      "title": {
+        "de": "Gräser & Licht",
+        "en": "Grass & Light",
+        "zh": "草与光"
+      },
+      "text": {
+        "de": "",
+        "en": "",
+        "zh": ""
+      },
+      "year": "",
+      "cover": "red-sun",
+      "photos": [
+        "red-sun",
+        "last-light",
+        "dusk-grass",
+        "heart-stone",
+        "reeds",
+        "branches",
+        "reed-study",
+        "green-study",
+        "after-the-rain"
+      ]
+    }
+  ],
+  "films": []
+}

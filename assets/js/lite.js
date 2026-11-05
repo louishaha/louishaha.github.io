@@ -4,7 +4,7 @@
    animiertes Korn, Unschärfe). Sieht ein Gerät langsam aus, wird einmal
    gefragt, ob es auf die leichte Version wechseln will. Die Antwort wird
    gemerkt; der Schalter im Footer schaltet jederzeit hin und zurück.
-   main.js hört über LKLite.onChange() zu und startet/stoppt die Effekte.
+   core.js hört über LKLite.onChange() zu und startet/stoppt die Effekte.
    ========================================================================== */
 (() => {
   "use strict";
@@ -24,18 +24,16 @@
     paintToggle();
     subs.forEach((f) => f(!!v));
   }
-  window.LKLite = { on, set, onChange: (f) => subs.push(f) };
-
-  /* Footer switch */
-  const btn = document.querySelector("[data-lite-toggle]");
+  /* Footer switch (rendered later by core.js, so looked up every time) */
   function paintToggle() {
-    if (!btn) return;
-    btn.setAttribute("aria-pressed", String(on()));
-    const s = btn.querySelector("[data-lite-state]");
-    if (s) s.textContent = tr(on() ? "on" : "off");
+    document.querySelectorAll("[data-lite-toggle]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(on()));
+      const s = btn.querySelector("[data-lite-state]");
+      if (s) s.textContent = tr(on() ? "on" : "off");
+    });
   }
-  btn?.addEventListener("click", () => set(!on()));
-  paintToggle();
+  document.addEventListener("click", (e) => { if (e.target.closest?.("[data-lite-toggle]")) set(!on()); });
+  window.LKLite = { on, set, onChange: (f) => subs.push(f), paint: paintToggle };
   I?.onChange(paintToggle);
 
   /* ------------------------------------------------------------------------

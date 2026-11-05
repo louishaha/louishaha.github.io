@@ -10,8 +10,8 @@
   --line: rgba(235, 229, 217, 0.14);
   --accent: #ff3b1f;
 
-  --serif: "Instrument Serif", "Times New Roman", Times, serif;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --serif: "Spectral", Georgia, serif;
+  --sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --gutter: clamp(16px, 2.2vw, 32px);
 }
 
@@ -29,10 +29,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.7;
-  letter-spacing: 0.01em;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-wrap: break-word;
 }
@@ -46,7 +45,7 @@ a:hover { text-decoration-color: var(--accent); }
   display: flex; justify-content: space-between; gap: 16px;
   padding: 14px var(--gutter);
   border-bottom: 1px solid var(--line);
-  text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px;
+  font-size: 14px;
 }
 .legal-nav a { text-decoration: none; }
 .legal-nav nav { display: flex; gap: 24px; }
@@ -58,13 +57,13 @@ a:hover { text-decoration-color: var(--accent); }
 }
 .legal h1 {
   margin: 0 0 clamp(32px, 5vw, 64px);
-  font-family: var(--serif); font-weight: 400;
-  font-size: clamp(3rem, 9vw, 7rem); line-height: 0.95; letter-spacing: -0.02em;
+  font-family: var(--serif); font-weight: 300;
+  font-size: clamp(3rem, 9vw, 7rem); line-height: 0.95; letter-spacing: -0.035em;
 }
 .legal h2 {
   margin: 2.6em 0 0.6em;
-  font-family: var(--serif); font-weight: 400;
-  font-size: clamp(1.5rem, 2.6vw, 2rem); line-height: 1.1;
+  font-family: var(--serif); font-weight: 300;
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem); line-height: 1.1;
 }
 .legal h3 { margin: 1.8em 0 0.4em; font-size: inherit; font-weight: 500; }
 .legal p, .legal ul { margin: 0 0 1em; }
