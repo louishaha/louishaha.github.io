@@ -10,7 +10,7 @@
   --line: rgba(235, 229, 217, 0.14);
   --tile: #1a1815;
   --accent: #ff3b1f; /* safelight */
-  --paper: #d9d0bf; /* photo paper in the developer tray */
+  --paper: #75706a; /* photo paper in the developer tray, dimmed for the dark room */
 
   --serif: "Spectral", "Iowan Old Style", Georgia, "Songti SC", "Noto Serif CJK SC", serif;
   --sans: "Archivo", "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
