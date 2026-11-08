@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/serie/:slug", "destination": "/serie/index.html" }
+  ],
+  "redirects": [
+    { "source": "/track-me", "destination": "/route/", "permanent": false }
+  ]
+}

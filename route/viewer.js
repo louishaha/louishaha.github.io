@@ -199,11 +199,35 @@
     </button>`;
   };
 
+  // public (gap year mode on): it is "Track me", in the visitor's language
+  const PUB = {
+    de: { lead: "Meine aktuelle Reise, live.", photos: "Fotografie", film: "Film" },
+    en: { lead: "My current trip, live.", photos: "Photography", film: "Film" },
+    zh: { lead: "我正在进行的旅程，实时更新。", photos: "摄影", film: "影像" },
+  };
+  const pubLang = (() => {
+    const saved = RT.store.get("lk-lang");
+    if (PUB[saved]) return saved;
+    const first = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+    return /^de\b/i.test(first) ? "de" : /^zh\b/i.test(first) ? "zh" : "en";
+  })();
   const renderHead = () => {
     const t = model.trip;
-    $("[data-title]").innerHTML = t.title ? esc(t.title).replace(/year$/i, (m) => `<em>${m}</em>`) : "Gap<em>year</em>";
-    $("[data-sub]").textContent = [t.subtitle || "Route & Journal", model.current || !model.stops.length ? "" : "Geplant"].filter(Boolean).join(" · ");
-    document.title = `${t.title || "Gapyear"} — Louis Koller`;
+    if (RT.public) {
+      const w = PUB[pubLang];
+      $("[data-title]").innerHTML = "Track <em>me</em>";
+      $("[data-sub]").textContent = w.lead;
+      document.title = "Track me — Louis Koller";
+      const nav = $("[data-sitenav]");
+      nav.hidden = false;
+      $('[data-sn="photos"]', nav).textContent = w.photos;
+      $('[data-sn="film"]', nav).textContent = w.film;
+      $("[data-home]").hidden = true;
+    } else {
+      $("[data-title]").innerHTML = t.title ? esc(t.title).replace(/year$/i, (m) => `<em>${m}</em>`) : "Gap<em>year</em>";
+      $("[data-sub]").textContent = [t.subtitle || "Route & Journal", model.current || !model.stops.length ? "" : "Geplant"].filter(Boolean).join(" · ");
+      document.title = `${t.title || "Gapyear"} — Louis Koller`;
+    }
 
     const st = model.stats;
     const started = !!model.current;

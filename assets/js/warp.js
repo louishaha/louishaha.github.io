@@ -3,8 +3,8 @@
    of paper while you scroll (the faster, the stronger).
    The DOM <img> elements stay in place for layout, loading, clicks and
    screen readers; they are only hidden visually while WebGL is running.
-   Without WebGL (or with reduced motion) nothing happens and the plain
-   images are shown.
+   Without WebGL (or with reduced motion, on touch screens or in the lite
+   version) nothing happens and the plain images are shown.
    ========================================================================== */
 window.LKWarp = function LKWarp({ items, hovered }) {
 
@@ -38,7 +38,8 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     uniform sampler2D uTex;
     uniform vec2 uSize;        // frame size in px
     uniform float uRadius;
-    uniform float uReveal;     // 0..1, wipes in from the bottom
+    uniform float uReveal;     // 0..1: wipe from the bottom, then develop
+    uniform vec3 uPaper;       // blank photo paper
     uniform float uZoom;       // image scale inside the frame
     uniform float uAlpha;
     uniform float uVel;
@@ -54,7 +55,12 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     void main() {
       vec2 px = (vUv - 0.5) * uSize;
       float a = clamp(0.5 - sdRound(px, uSize * 0.5, uRadius), 0.0, 1.0);
-      a *= clamp(vUv.y * uSize.y - (1.0 - uReveal) * uSize.y + 0.5, 0.0, 1.0);
+      // the wipe edge runs up past the top; whatever it has passed is paper
+      // that has been in the developer for a while (dev 0..1)
+      const float D = 0.6;
+      float edge = 1.0 - uReveal * (1.0 + D);
+      a *= clamp((vUv.y - edge) * uSize.y + 0.5, 0.0, 1.0);
+      float dev = clamp((vUv.y - edge) / D, 0.0, 1.0);
 
       // cover-fit, then zoom around the centre
       vec2 uv = vUv - 0.5;
@@ -70,6 +76,10 @@ window.LKWarp = function LKWarp({ items, hovered }) {
         texture2D(uTex, uv - vec2(0.0, s)).b
       );
       col = mix(uTile, col, uLoaded);
+      // developer tray: dark tones come up first, highlights last
+      float L = dot(col, vec3(0.299, 0.587, 0.114));
+      float k = smoothstep(L * 0.55, L * 0.55 + 0.45, dev);
+      col = mix(uPaper, col, k);
       float A = a * uAlpha;
       gl_FragColor = vec4(col * A, A);
     }`;
@@ -114,7 +124,7 @@ window.LKWarp = function LKWarp({ items, hovered }) {
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
   const U = {};
-  ["uRect", "uView", "uVel", "uSize", "uRadius", "uReveal", "uZoom", "uAlpha", "uLoaded", "uImgAspect", "uTile", "uTex"]
+  ["uRect", "uView", "uVel", "uSize", "uRadius", "uReveal", "uPaper", "uZoom", "uAlpha", "uLoaded", "uImgAspect", "uTile", "uTex"]
     .forEach((n) => (U[n] = gl.getUniformLocation(prog, n)));
 
   gl.enable(gl.BLEND);
@@ -161,16 +171,21 @@ window.LKWarp = function LKWarp({ items, hovered }) {
   }
 
   let tile = [0.1, 0.09, 0.08];
-  function readTile() {
-    const c = getComputedStyle(document.documentElement).getPropertyValue("--tile").trim();
+  let paper = [0.85, 0.82, 0.75];
+  const cssColor = (name, fallback) => {
+    const c = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const m = c.match(/^#([0-9a-f]{6})$/i);
-    if (m) {
-      const n = parseInt(m[1], 16);
-      tile = [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
-    }
+    if (!m) return fallback;
+    const n = parseInt(m[1], 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  };
+  function readTile() {
+    tile = cssColor("--tile", tile);
+    paper = cssColor("--paper", paper);
   }
   readTile();
-  new MutationObserver(readTile).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const themeObs = new MutationObserver(readTile);
+  themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   let W = 0, H = 0, dpr = 1;
   function resize() {
@@ -182,10 +197,11 @@ window.LKWarp = function LKWarp({ items, hovered }) {
   }
 
   /* ------------------------------------------------------------------- loop */
-  let lastY = scrollY, vel = 0, lastT = performance.now();
+  let lastY = scrollY, vel = 0, lastT = performance.now(), raf = 0, dead = false;
   const ease = (cur, target, k, dt) => cur + (target - cur) * (1 - Math.pow(1 - k, dt / 16.67));
 
   function frame(now) {
+    if (dead) return;
     const dt = Math.min(64, now - lastT);
     lastT = now;
     if (innerWidth !== W || innerHeight !== H) resize();
@@ -202,6 +218,7 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     gl.uniform2f(U.uView, W, H);
     gl.uniform1f(U.uVel, vel);
     gl.uniform3f(U.uTile, tile[0], tile[1], tile[2]);
+    gl.uniform3f(U.uPaper, paper[0], paper[1], paper[2]);
 
     // Upload textures ahead of time (closest to the viewport first, within a
     // small time budget per frame) so photos are complete before they arrive.
@@ -224,7 +241,8 @@ window.LKWarp = function LKWarp({ items, hovered }) {
       // only reveal once the texture is on the GPU, and start a little before
       // the photo scrolls into view so it is whole when it arrives
       const inView = !!p.tex && (p.fig.classList.contains("is-in") || r.top < H * 1.3);
-      p.reveal = ease(p.reveal, inView ? 1 : 0, 0.1, dt);
+      // linear in time (about 2.2 s), eased in the shader input below
+      p.reveal = inView ? Math.min(1, p.reveal + dt / 2200) : Math.max(0, p.reveal - dt / 400);
       p.zoom = ease(p.zoom, inView ? (hov === p.i ? 1.04 : 1) : 1.14, 0.05, dt);
       p.alpha = ease(p.alpha, hov >= 0 && hov !== p.i ? 0.4 : 1, 0.1, dt);
       p.loaded = p.tex ? 1 : 0;
@@ -233,7 +251,7 @@ window.LKWarp = function LKWarp({ items, hovered }) {
       gl.uniform4f(U.uRect, r.left, r.top, r.width, r.height);
       gl.uniform2f(U.uSize, r.width, r.height);
       gl.uniform1f(U.uRadius, p.radius());
-      gl.uniform1f(U.uReveal, p.reveal);
+      gl.uniform1f(U.uReveal, 1 - Math.pow(1 - p.reveal, 2.2));
       gl.uniform1f(U.uZoom, p.zoom);
       gl.uniform1f(U.uAlpha, p.alpha);
       gl.uniform1f(U.uLoaded, p.loaded);
@@ -244,16 +262,22 @@ window.LKWarp = function LKWarp({ items, hovered }) {
     raf = requestAnimationFrame(frame);
   }
 
-  canvas.addEventListener("webglcontextlost", (e) => {
-    e.preventDefault();
+  // stop drawing and hand the photos back to the DOM <img> elements
+  function destroy() {
+    if (dead) return;
+    dead = true;
     cancelAnimationFrame(raf);
+    themeObs.disconnect();
     document.documentElement.classList.remove("gl-on");
     canvas.remove();
-  });
+    planes.forEach((p) => p.tex && gl.deleteTexture(p.tex));
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+  }
+  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); destroy(); });
 
   document.body.prepend(canvas);
   resize();
   document.documentElement.classList.add("gl-on");
-  let raf = requestAnimationFrame(frame);
-  return { canvas };
+  raf = requestAnimationFrame(frame);
+  return { canvas, destroy };
 };

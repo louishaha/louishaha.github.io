@@ -82,10 +82,23 @@
     return input;
   };
 
-  RT.gate = (onOpen) => {
+  // While the gap year mode is on (admin → Einstellungen) the trip is public:
+  // no code. The check is quick; until it answers the gate stays invisible.
+  RT.public = false;
+  RT.gate = async (onOpen) => {
     const gate = RT.$("[data-gate]");
-    if (RT.isUnlocked()) {
-      document.documentElement.classList.add("unlocked");
+    const root = document.documentElement;
+    try {
+      const site = await Promise.race([
+        fetch("/data/site.json", { cache: "no-cache" }).then((r) => r.json()),
+        new Promise((res, rej) => setTimeout(() => rej(new Error("timeout")), 4000)),
+      ]);
+      RT.public = !!site.gapyear;
+    } catch (e) { /* offline: fall back to the code */ }
+    root.classList.remove("checking");
+    if (RT.public) root.classList.add("public");
+    if (RT.public || RT.isUnlocked()) {
+      root.classList.add("unlocked");
       if (gate) gate.remove();
       onOpen();
       return;
