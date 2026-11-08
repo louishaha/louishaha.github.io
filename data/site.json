@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "rev": 1,
-  "updated": "2026-11-05T00:51:48.245Z",
+  "rev": 2,
+  "updated": "2026-11-08T13:52:26.808Z",
   "name": [
     "Louis",
     "Koller"
   ],
   "email": "mail@louiskoller.cc",
   "timezone": "Europe/Berlin",
-  "gapyear": false,
+  "gapyear": true,
   "shuffle": true,
   "facts": [
     {
@@ -768,5 +768,6 @@
       ]
     }
   ],
-  "films": []
+  "films": [],
+  "links": []
 }
